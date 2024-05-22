@@ -1464,6 +1464,10 @@ class ControlPanel(wx.Panel):
         self.target_selected = True
         self.UpdateTargetButton()
         self.UpdateRobotButtons()
+        # x, y, z = marker[self.marker_list_ctrl.GetFocusedItem()].position
+        # rx, ry, rz = marker[self.marker_list_ctrl.GetFocusedItem()].orientation
+        # Publisher.sendMessage('Set cross focal point', position=[x, y, z, rx, ry, rz])
+        # Publisher.sendMessage('Update slice viewer')
 
     def UpdateNavigationStatus(self, nav_status, vis_status):
         if not nav_status:

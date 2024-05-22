@@ -22,7 +22,7 @@
 # Author: Victor Hugo Souza (victorhos-at-hotmail.com)
 # Contributions: Dogu Baran Aydogan
 # Initial date: 8 May 2020
-
+import pandas as pd
 import queue
 import threading
 import time
@@ -155,7 +155,7 @@ def compute_tracts(trk_list, n_tract=0, alpha=255):
     # create a branch and add the tracts
     branch = create_branch(out_list, n_tract)
 
-    return branch
+    return trk_arr, trk_dir, branch
 
 
 def compute_and_visualize_tracts(trekker, position, affine, affine_vtk, n_tracts_max):
@@ -182,29 +182,36 @@ def compute_and_visualize_tracts(trekker, position, affine, affine_vtk, n_tracts
     bundle = vtkMultiBlockDataSet()
     n_branches, n_tracts, count_loop = 0, 0, 0
     n_threads = 2 * const.N_CPU - 1
-
-    while n_tracts < n_tracts_max:
-        n_param = 1 + (count_loop % 10)
-        # rescale the alpha value that defines the opacity of the branch
-        # the n interval is [1, 10] and the new interval is [51, 255]
-        # the new interval is defined to have no 0 opacity (minimum is 51, i.e., 20%)
-        alpha = (n_param - 1) * (255 - 51) / (10 - 1) + 51
-        trekker.minFODamp(n_param * 0.01)
-
-        # print("seed example: {}".format(seed_trk))
-        trekker.seed_coordinates(np.repeat(seed_trk, n_threads, axis=0))
-        # print("trk list len: ", len(trekker.run()))
-        trk_list = trekker.run()
-        n_tracts += len(trk_list)
-        if len(trk_list):
-            branch = compute_tracts(trk_list, n_tract=0, alpha=alpha)
-            bundle.SetBlock(n_branches, branch)
-            n_branches += 1
-
-        count_loop += 1
-
-        if (count_loop == 20) and (n_tracts == 0):
-            break
+    with pd.ExcelWriter(str(position) + '.xlsx') as writer:
+        while n_tracts < n_tracts_max:
+            n_param = 1 + (count_loop % 10)
+            # rescale the alpha value that defines the opacity of the branch
+            # the n interval is [1, 10] and the new interval is [51, 255]
+            # the new interval is defined to have no 0 opacity (minimum is 51, i.e., 20%)
+            alpha = (n_param - 1) * (255 - 51) / (10 - 1) + 51
+            trekker.minFODamp(n_param * 0.01)
+            
+            # print("seed example: {}".format(seed_trk))
+            trekker.seed_coordinates(np.repeat(seed_trk, n_threads, axis=0))
+            # print("trk list len: ", len(trekker.run()))
+            trk_list = trekker.run()
+            n_tracts += len(trk_list)
+            
+            if len(trk_list):
+                trk_arr, trk_dir, branch = compute_tracts(trk_list, n_tract=0, alpha=alpha)
+                bundle.SetBlock(n_branches, branch)
+                n_branches += 1
+                
+                for i in range(len(trk_arr)):
+                    dataframe_arr_index = pd.DataFrame(trk_arr[i])
+                    dataframe_dir_index = pd.DataFrame(trk_dir[i])
+                    dataframe_arr_index = pd.concat([dataframe_arr_index, dataframe_dir_index], axis=1)
+                    dataframe_arr_index.to_excel(writer, sheet_name=str(count_loop) + '_' + str(i))
+            
+            count_loop += 1
+            
+            if (count_loop == 20) and (n_tracts == 0):
+                break
 
     Publisher.sendMessage('Remove tracts')
     if n_tracts:
