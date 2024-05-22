@@ -1476,10 +1476,6 @@ class ControlPanel(wx.Panel):
         self.target_selected = True
         self.UpdateTargetButton()
         self.UpdateRobotButtons()
-        # x, y, z = marker[self.marker_list_ctrl.GetFocusedItem()].position
-        # rx, ry, rz = marker[self.marker_list_ctrl.GetFocusedItem()].orientation
-        # Publisher.sendMessage('Set cross focal point', position=[x, y, z, rx, ry, rz])
-        # Publisher.sendMessage('Update slice viewer')
 
     def UpdateNavigationStatus(self, nav_status, vis_status):
         if not nav_status:
@@ -2234,7 +2230,12 @@ class MarkersPanel(wx.Panel, ColumnSorterMixin):
         idx = self.marker_list_ctrl.GetFocusedItem()
         marker = self.markers.list[idx]
         Publisher.sendMessage('Set camera to focus on marker', marker=marker)
-
+        x, y, z = marker.position
+        rx, ry, rz = marker.orientation
+        Publisher.sendMessage('Set cross focal point', position=[x, y, z, rx, ry, rz])
+        Publisher.sendMessage('Update slice viewer')
+        print("sable")
+        
     def OnCreateCoilTargetFromLandmark(self, evt):
         list_index = self.marker_list_ctrl.GetFocusedItem()
         if list_index == -1:
