@@ -182,7 +182,7 @@ def compute_and_visualize_tracts(trekker, position, affine, affine_vtk, n_tracts
     bundle = vtkMultiBlockDataSet()
     n_branches, n_tracts, count_loop = 0, 0, 0
     n_threads = 2 * const.N_CPU - 1
-    with pd.ExcelWriter(str(position) + '.xlsx') as writer:
+    with pd.ExcelWriter(str(position) + str(time.time())+'.xlsx') as writer:
         while n_tracts < n_tracts_max:
             n_param = 1 + (count_loop % 10)
             # rescale the alpha value that defines the opacity of the branch
