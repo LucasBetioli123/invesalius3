@@ -26,7 +26,7 @@ import pandas as pd
 import queue
 import threading
 import time
-
+from dipy.io.image import load_nifti
 import numpy as np
 from vtkmodules.vtkCommonCore import vtkPoints, vtkUnsignedCharArray
 from vtkmodules.vtkCommonDataModel import (
@@ -40,7 +40,7 @@ from invesalius.pubsub import pub as Publisher
 
 import invesalius.constants as const
 import invesalius.data.imagedata_utils as img_utils
-
+from invesalius.data import IA_tract
 # Nice print for arrays
 # np.set_printoptions(precision=2)
 # np.set_printoptions(suppress=True)
@@ -212,12 +212,23 @@ def compute_and_visualize_tracts(trekker, position, affine, affine_vtk, n_tracts
             
             if (count_loop == 20) and (n_tracts == 0):
                 break
-
+    
+        
+   
+    
+    
+    
+    
     Publisher.sendMessage('Remove tracts')
     if n_tracts:
         Publisher.sendMessage('Update tracts', root=bundle, affine_vtk=affine_vtk,
                               coord_offset=position, coord_offset_w=seed_trk[0].tolist())
-
+    volume = IA_tract.transformtract_nifit(dataframe_arr_index)
+    volume = IA_tract.preprocessing(volume)
+    volume = IA_tract.processing(volume)
+    volume = IA_tract.preprocessing(volume)
+    prediction = IA_tract.predicition(volume)
+    print(prediction)
 
 class ComputeTractsThread(threading.Thread):
     # TODO: Remove this class and create a case where no ACT is provided in the class ComputeTractsACTThread
