@@ -63,10 +63,10 @@ def resize_volume(img):
 	height_factor = 1 / height
 	
 	img = ndimage.zoom(img, (width_factor, height_factor, depth_factor), order=1)
-	# img = np.expand_dims(img, axis=-1)  # Add channel dimension
+	img = np.expand_dims(img, axis=-1)  # Add channel dimension
 	#
-	# # Add batch dimension
-	# img = np.expand_dims(img, axis=0)
+	# Add batch dimension
+	img = np.expand_dims(img, axis=0)
 	return img
 def preprocessing(volume):
 	"""Read and resize to volume"""
