@@ -9,6 +9,12 @@ import invesalius.data.vtk_utils as vtku
 import invesalius.session as ses
 from invesalius.navigation.tracker import Tracker
 from invesalius.pubsub import pub as Publisher
+import vtk
+import numpy as np
+from invesalius.project import Project
+from vtkmodules.vtkFiltersGeneral import vtkTransformPolyDataFilter
+from vtkmodules.vtkCommonDataModel import vtkIterativeClosestPointTransform, vtkPolyData
+from vtkmodules.vtkCommonCore import vtkPoints
 
 
 class CoilVisualizer:
@@ -35,7 +41,8 @@ class CoilVisualizer:
 
         # The vector field visualizer is used to show a vector field relative to the coil.
         self.vector_field_visualizer = vector_field_visualizer
-
+        
+        self.brain_surface=None
         # The actor for showing the actual coil in the volume viewer.
         self.coil_actor = None
 
@@ -201,7 +208,14 @@ class CoilVisualizer:
     # Called when 'show coil' button is pressed in the user interface or in code.
     def ShowCoil(self, state):
         self.show_coil_pressed = state
-
+        from invesalius.project import Project
+        
+        inv_proj = Project()
+        try:
+            self.brain_surface = inv_proj.surface_dict[0].polydata
+        except:
+            None
+        
         # Initially, if the tracker fiducials are not set but the show coil button is pressed,
         # press it again to hide the coil
         if not self.tracker_fiducials_set and self.show_coil_pressed and self.initial_button_press:
@@ -323,13 +337,53 @@ class CoilVisualizer:
             scale=0.5,
         )
         self.coil_center_actor = coil_center_actor
-
+        self.coil_projection_actor = self.actor_factory.CreateTorus(
+            position=[0., 0., 0.],
+            orientation=[0., 0., 0.],
+            colour=[.0, .0, 1.0]
+        )
+        
         self.renderer.AddActor(self.coil_actor)
         self.renderer.AddActor(self.coil_center_actor)
+        self.renderer.AddActor(self.coil_projection_actor)
         # TODO: Vector field assembly follows a different pattern for addition, should unify.
         self.vector_field_assembly.SetVisibility(1)
 
     def UpdateCoilPose(self, m_img, coord):
+        def ICP(coord, surface):
+            """
+            Apply ICP transforms to fit the points to the surface
+            Args:
+                coord: raw coordinates to apply ICP
+            """
+            
+            sourcePoints = np.array(coord[:3])
+            sourcePoints_vtk = vtkPoints()
+            sourcePoints_vtk.InsertNextPoint(sourcePoints)
+            source = vtkPolyData()
+            source.SetPoints(sourcePoints_vtk)
+            
+            icp = vtkIterativeClosestPointTransform()
+            icp.SetSource(source)
+            icp.SetTarget(surface)
+            
+            icp.GetLandmarkTransform().SetModeToRigidBody()
+            # icp.GetLandmarkTransform().SetModeToAffine()
+            # icp.DebugOn()
+            icp.SetMaximumNumberOfIterations(1)
+            icp.Modified()
+            icp.Update()
+            
+            icpTransformFilter = vtkTransformPolyDataFilter()
+            icpTransformFilter.SetInputData(source)
+            icpTransformFilter.SetTransform(icp)
+            icpTransformFilter.Update()
+            
+            transformedSource = icpTransformFilter.GetOutput()
+            p = [0, 0, 0]
+            transformedSource.GetPoint(0, p)
+            return p[0], p[1], p[2]
+        
         """
         During navigation, use updated coil pose to perform the following tasks:
 
@@ -344,3 +398,18 @@ class CoilVisualizer:
         self.coil_actor.SetUserMatrix(m_img_vtk)
         self.coil_center_actor.SetUserMatrix(m_img_vtk)
         self.vector_field_assembly.SetUserMatrix(m_img_vtk)
+        t_translation = [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, -10], [0, 0, 0, 1]]
+        
+        m_point_t = m_img_flip @ t_translation
+        
+        coord_icp = list(ICP(m_point_t[:3, -1], self.brain_surface))
+        m_point_t[:3, -1] = coord_icp
+        proj = vtku.numpy_to_vtkMatrix4x4(m_point_t)
+        # self.coil_center_actor.SetUserMatrix(proj)
+        
+        self.coil_projection_actor.SetUserMatrix(proj)
+        scale = vtk.vtkTransform()
+        scale.SetMatrix(proj)
+        scale.Scale(0.75, 0.75, 0.75)
+        self.coil_projection_actor.SetUserTransform(scale)
+
