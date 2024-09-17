@@ -173,7 +173,7 @@ class CoilVisualizer:
         self.renderer.RemoveActor(self.coil_actor)
         self.renderer.RemoveActor(self.coil_center_actor)
         # TODO: Vector field assembly follows a different pattern for removal, should unify.
-        self.vector_field_assembly.SetVisibility(0)
+        self.vector_field_assembly.SetVisibility(1)
 
         self.coil_actor = None
         self.coil_center_actor = None
@@ -336,17 +336,20 @@ class CoilVisualizer:
             scale=0.5,
         )
         self.coil_center_actor = coil_center_actor
-        self.coil_projection_actor = self.actor_factory.CreateTorus(
+        self.x_axis_actor = self.actor_factory.CreateArrowUsingDirection([0., 0., 0.], [15., 10., 0.], colour=[0.8, .0, 0.8])
+        self.coil_projection_actor = self.actor_factory.CreateBall(
             position=[0., 0., 0.],
-            orientation=[0., 0., 0.],
-            colour=[.0, .0, 1.0]
+            colour=[0.8, .0, 0.8]
         )
         
         self.renderer.AddActor(self.coil_actor)
         self.renderer.AddActor(self.coil_center_actor)
+        self.renderer.AddActor(self.x_axis_actor)
         self.renderer.AddActor(self.coil_projection_actor)
         # TODO: Vector field assembly follows a different pattern for addition, should unify.
         self.vector_field_assembly.SetVisibility(1)
+        self.x_axis_actor.SetVisibility(1)
+        
 
     def UpdateCoilPose(self, m_img, coord):
         def ICP(coord, surface):
@@ -410,5 +413,14 @@ class CoilVisualizer:
         scale = vtk.vtkTransform()
         scale.SetMatrix(proj)
         scale.Scale(0.75, 0.75, 0.75)
+        
         self.coil_projection_actor.SetUserTransform(scale)
+        
+        
+        self.x_axis_actor.SetUserMatrix(proj)
+        scale = vtk.vtkTransform()
+        scale.SetMatrix(proj)
+        scale.Scale(0.75, 0.75, 0.75)
+        self.x_axis_actor.SetUserTransform(scale)
+
 
