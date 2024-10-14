@@ -386,41 +386,45 @@ class CoilVisualizer:
             transformedSource.GetPoint(0, p)
             return p[0], p[1], p[2]
         
-        """
-        During navigation, use updated coil pose to perform the following tasks:
-
-        - Update actor positions for coil, coil center, and coil orientation axes.
-        """
+        # """
+        # During navigation, use updated coil pose to perform the following tasks:
+        #
+        # - Update actor positions for coil, coil center, and coil orientation axes.
+        # """
         m_img_flip = m_img.copy()
         m_img_flip[1, -1] = -m_img_flip[1, -1]
 
-        m_img_vtk = vtku.numpy_to_vtkMatrix4x4(m_img_flip)
-
-        # Update actor positions for coil, coil center, and coil orientation axes.
-        self.coil_actor.SetUserMatrix(m_img_vtk)
-        self.coil_center_actor.SetUserMatrix(m_img_vtk)
-        self.vector_field_assembly.SetUserMatrix(m_img_vtk)
-        t_translation = [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, -10], [0, 0, 0, 1]]
+        # m_img_vtk = vtku.numpy_to_vtkMatrix4x4(m_img_flip)
+        #
+        # # Update actor positions for coil, coil center, and coil orientation axes.
+        #
+        # t_translation = [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, -10], [0, 0, 0, 1]]
+        #
+        # m_point_t = m_img_flip @ t_translation
+        #
+        # coord_icp = list(ICP(m_point_t[:3, -1], self.brain_surface))
+        # m_point_t[:3, -1] = coord_icp
+        # proj = vtku.numpy_to_vtkMatrix4x4(m_point_t)
+        # # self.coil_center_actor.SetUserMatrix(proj)
+        
+        t_translation = [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, -0.5], [0, 0, 0, 1]]
         
         m_point_t = m_img_flip @ t_translation
-        
-        coord_icp = list(ICP(m_point_t[:3, -1], self.brain_surface))
-        m_point_t[:3, -1] = coord_icp
-        proj = vtku.numpy_to_vtkMatrix4x4(m_point_t)
-        # self.coil_center_actor.SetUserMatrix(proj)
-        
-        self.coil_projection_actor.SetUserMatrix(proj)
+        m_point_t_vtk = vtku.numpy_to_vtkMatrix4x4(m_point_t)
+        self.x_axis_actor.SetUserMatrix(m_point_t_vtk)
         scale = vtk.vtkTransform()
-        scale.SetMatrix(proj)
+        scale.SetMatrix(m_point_t_vtk)
         scale.Scale(0.75, 0.75, 0.75)
+        self.x_axis_actor.SetUserTransform(scale)
         
-        self.coil_projection_actor.SetUserTransform(scale)
-        
-        
-        self.x_axis_actor.SetUserMatrix(proj)
+        self.coil_actor.SetUserMatrix(m_point_t_vtk)
+        self.coil_center_actor.SetUserMatrix(m_point_t_vtk)
         scale = vtk.vtkTransform()
-        scale.SetMatrix(proj)
+        scale.SetMatrix(m_point_t_vtk)
         scale.Scale(0.75, 0.75, 0.75)
         self.x_axis_actor.SetUserTransform(scale)
 
-
+        
+        
+    
+    
