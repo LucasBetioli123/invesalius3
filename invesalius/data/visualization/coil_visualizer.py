@@ -336,7 +336,8 @@ class CoilVisualizer:
             scale=0.5,
         )
         self.coil_center_actor = coil_center_actor
-        self.x_axis_actor = self.actor_factory.CreateArrowUsingDirection([0., 0., 0.], [15., 10., 0.], colour=[0.8, .0, 0.8])
+        self.x_axis_actor = self.actor_factory.CreateLine([0., 0., 0.], [10., 0., 0.], colour=[0.8, .0, 0.8])
+        self.x_axis_actor.GetProperty().SetLineWidth(7.0)
         self.coil_projection_actor = self.actor_factory.CreateBall(
             position=[0., 0., 0.],
             colour=[0.8, .0, 0.8]
@@ -414,7 +415,7 @@ class CoilVisualizer:
         self.x_axis_actor.SetUserMatrix(m_point_t_vtk)
         scale = vtk.vtkTransform()
         scale.SetMatrix(m_point_t_vtk)
-        scale.Scale(0.75, 0.75, 0.75)
+        scale.Scale(1, 1, 1)
         self.x_axis_actor.SetUserTransform(scale)
         
         self.coil_actor.SetUserMatrix(m_point_t_vtk)
