@@ -254,8 +254,12 @@ class CoilVisualizer:
         )
 
         self.renderer.AddActor(coil_actor)
+        self.x_axis_actor = self.actor_factory.CreateLine([0., 0., 0.], [10., 0., 0.], colour=[0.8, .0, 0.])
+        self.x_axis_actor.GetProperty().SetLineWidth(13.0)
+        
         self.renderer.AddActor(coil_center_actor)
-
+        self.renderer.AddActor(self.x_axis_actor)
+        self.x_axis_actor.SetVisibility(1)
         self.coils[coil_name] = {}
         self.coils[coil_name]["actor"] = coil_actor
         self.coils[coil_name]["center_actor"] = coil_center_actor
@@ -295,6 +299,15 @@ class CoilVisualizer:
             m_img_flip[1, -1] = -m_img_flip[1, -1]
 
             m_img_vtk = vtku.numpy_to_vtkMatrix4x4(m_img_flip)
+            t_translation = [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, -0.5], [0, 0, 0, 1]]
+            
+            m_point_t = m_img_flip @ t_translation
+            m_point_t_vtk = vtku.numpy_to_vtkMatrix4x4(m_point_t)
+            self.x_axis_actor.SetUserMatrix(m_point_t_vtk)
+            scale = vtk.vtkTransform()
+            scale.SetMatrix(m_point_t_vtk)
+            scale.Scale(1, 1, 1)
+            self.x_axis_actor.SetUserTransform(scale)
 
             # Update actor positions for coil, coil center, and coil orientation axes.
             self.coils[name]["actor"].SetUserMatrix(m_img_vtk)
