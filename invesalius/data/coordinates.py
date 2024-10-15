@@ -756,12 +756,17 @@ class ReceiveCoordinates(threading.Thread):
         self.tracker_id = tracker_id
         self.event = event
         self.TrackerCoordinates = TrackerCoordinates
+        self.marker_label = None
 
     def __bind_events(self) -> None:
         Publisher.subscribe(self.UpdateCoordSleep, "Update coord sleep")
+        Publisher.subscribe(self.OnUpdateMarkerLabel, 'Set target')
 
     def UpdateCoordSleep(self, data) -> None:
         self.sleep_coord = data
+
+    def OnUpdateMarkerLabel(self, marker):
+        self.marker_label = marker.label
 
     def run(self) -> None:
         while not self.event.is_set():
@@ -769,4 +774,5 @@ class ReceiveCoordinates(threading.Thread):
                 self.tracker_connection, self.tracker_id, const.DEFAULT_REF_MODE
             )
             self.TrackerCoordinates.SetCoordinates(coord_raw, marker_visibilities)
+            wx.CallAfter(Publisher.sendMessage, "Marker label", name=self.marker_label)
             sleep(self.sleep_coord)
