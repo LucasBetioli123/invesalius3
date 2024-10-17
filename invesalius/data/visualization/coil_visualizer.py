@@ -322,9 +322,13 @@ class CoilVisualizer:
             scale=0.5,
         )
         self.coil_center_actor = coil_center_actor
+        self.x_axis_actor = self.actor_factory.CreateLine([0., 0., 0.], [10., 0., 0.], colour=[0.8, .0,0.0              ])
+        self.x_axis_actor.GetProperty().SetLineWidth(7.0)
 
         self.renderer.AddActor(self.coil_actor)
         self.renderer.AddActor(self.coil_center_actor)
+        self.renderer.AddActor(self.x_axis_actor)
+        self.x_axis_actor.SetVisibility(1)
         # TODO: Vector field assembly follows a different pattern for addition, should unify.
         self.vector_field_assembly.SetVisibility(1)
 
@@ -343,3 +347,12 @@ class CoilVisualizer:
         self.coil_actor.SetUserMatrix(m_img_vtk)
         self.coil_center_actor.SetUserMatrix(m_img_vtk)
         self.vector_field_assembly.SetUserMatrix(m_img_vtk)
+        t_translation = [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, -0.5], [0, 0, 0, 1]]
+
+        m_point_t = m_img_flip @ t_translation
+        m_point_t_vtk = vtku.numpy_to_vtkMatrix4x4(m_point_t)
+        self.x_axis_actor.SetUserMatrix(m_point_t_vtk)
+        scale = vtk.vtkTransform()
+        scale.SetMatrix(m_point_t_vtk)
+        scale.Scale(1, 1, 1)
+        self.x_axis_actor.SetUserTransform(scale)
