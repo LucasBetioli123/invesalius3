@@ -143,6 +143,7 @@ celerybeat.pid
 .venv
 env/
 venv/
+invesalius_ambiente/
 ENV/
 env.bak/
 venv.bak/
@@ -257,3 +258,8 @@ tags
 ### Patches and diffs ###
 *.patch
 *.diff
+
+# MacOS temporary file
+.DS_Store
+*.xlsx
+icons/robot_track_target.svg
