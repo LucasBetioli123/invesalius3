@@ -258,11 +258,14 @@ tags
 *.patch
 *.diff
 <<<<<<< HEAD
+<<<<<<< HEAD
 
 # MacOS temporary file
 .DS_Store
 *.xlsx
 icons/robot_track_target.svg
 plugins
+=======
+>>>>>>> parent of 9575d1cc (Merge branch 'master' into trac_and_coord_save)
 =======
 >>>>>>> parent of 9575d1cc (Merge branch 'master' into trac_and_coord_save)

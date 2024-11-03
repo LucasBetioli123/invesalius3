@@ -144,6 +144,7 @@ class Frame(wx.Frame):
         """
         sub = Publisher.subscribe
 <<<<<<< HEAD
+<<<<<<< HEAD
         sub(self._BeginBusyCursor, "Begin busy cursor")
         sub(self._ShowContentPanel, "Cancel DICOM load")
         sub(self._EndBusyCursor, "End busy cursor")
@@ -163,6 +164,8 @@ class Frame(wx.Frame):
         sub(self._Exit, "Exit")
         sub(self.TakeMarker, "Highlight marker")
 =======
+=======
+>>>>>>> parent of 9575d1cc (Merge branch 'master' into trac_and_coord_save)
         sub(self._BeginBusyCursor, 'Begin busy cursor')
         sub(self._ShowContentPanel, 'Cancel DICOM load')
         sub(self._EndBusyCursor, 'End busy cursor')
@@ -180,6 +183,9 @@ class Frame(wx.Frame):
         sub(self._UpdateAUI, 'Update AUI')
         sub(self._UpdateViewerFocus, 'Set viewer orientation focus')
         sub(self._Exit, 'Exit')
+<<<<<<< HEAD
+>>>>>>> parent of 9575d1cc (Merge branch 'master' into trac_and_coord_save)
+=======
 >>>>>>> parent of 9575d1cc (Merge branch 'master' into trac_and_coord_save)
 
     def __bind_events_wx(self):
@@ -193,6 +199,7 @@ class Frame(wx.Frame):
         # Close InVesalius main window, hence exit the software.
         self.Bind(wx.EVT_CLOSE, self.OnExit)
 
+<<<<<<< HEAD
 <<<<<<< HEAD
         # Bind global key events.
         self.Bind(wx.EVT_CHAR_HOOK, self.OnGlobalKey)
@@ -239,6 +246,8 @@ class Frame(wx.Frame):
     def TakeMarker(self, marker, render=True):
         self.marker = marker
         
+=======
+>>>>>>> parent of 9575d1cc (Merge branch 'master' into trac_and_coord_save)
 =======
 >>>>>>> parent of 9575d1cc (Merge branch 'master' into trac_and_coord_save)
     def __init_aui(self):
