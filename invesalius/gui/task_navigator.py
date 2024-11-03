@@ -2565,14 +2565,14 @@ class MarkersPanel(wx.Panel, ColumnSorterMixin):
         self.markers.SelectMarker(marker_id)
         Publisher.sendMessage("Set cross focal point", position=marker.position+[None,None,None])
         Publisher.sendMessage("Update slices position", position=marker.position)
-        Publisher.sendMessage("Set target", marker=marker)
+        #Publisher.sendMessage("Set target", marker=marker)
         
 
     # Called when a marker on the list loses the focus by the user left-clicking on another marker.
     #
     # Note: This is called also when re-clicking on the same marker that is already focused.
     def OnMarkerUnfocused(self, evt):
-        Publisher.sendMessage("Unset target", marker=self.currently_focused_marker)
+        #Publisher.sendMessage("Unset target", marker=self.currently_focused_marker)
         self.markers.DeselectMarker()
 
     def SetCameraToFocusOnMarker(self, evt):

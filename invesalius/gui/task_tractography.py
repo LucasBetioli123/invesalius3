@@ -626,7 +626,7 @@ class InnerTaskPanel(wx.Panel):
         # It updates when cross updates
         # pass
         if self.view_tracts and not self.nav_status:
-            # print("Running during navigation")
+            #print("Running during navigation")
             coord_flip = list(position[:3])
             coord_flip[1] = -coord_flip[1]
             dti.compute_and_visualize_tracts(
