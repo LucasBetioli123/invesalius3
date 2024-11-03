@@ -1,11 +1,12 @@
+import setuptools
+import logging
 import os
 import pathlib
 import subprocess
 import sys
 
 import numpy
-import setuptools
-from Cython.Build import build_ext, cythonize
+from Cython.Build import cythonize, build_ext
 
 if sys.platform == "darwin":
     unix_copt = ["-Xpreprocessor", "-fopenmp", "-lomp"]
@@ -59,9 +60,11 @@ class BuildPluginsCommand(setuptools.Command):
         plugins_folder = inv_folder.joinpath("plugins")
         for p in compilable_plugins:
             plugin_folder = plugins_folder.joinpath(p)
-            self.announce(f"Compiling plugin: {p}")
+            self.announce("Compiling plugin: {}".format(p))
             os.chdir(plugin_folder)
-            subprocess.check_call([sys.executable, "setup.py", "build_ext", "--inplace"])
+            subprocess.check_call(
+                [sys.executable, "setup.py", "build_ext", "--inplace"]
+            )
             os.chdir(inv_folder)
 
 

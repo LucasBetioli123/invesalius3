@@ -21,6 +21,8 @@ import os
 import re
 import sys
 import tempfile
+import threading
+from multiprocessing import cpu_count
 
 import numpy
 import wx
@@ -38,11 +40,11 @@ from vtkmodules.vtkIOImage import (
     vtkTIFFReader,
 )
 
+from invesalius.pubsub import pub as Publisher
 import invesalius.constants as const
 import invesalius.data.converters as converters
 import invesalius.utils as utils
 from invesalius import inv_paths
-from invesalius.pubsub import pub as Publisher
 
 # flag to control vtk error in read files
 no_error = True
@@ -65,7 +67,7 @@ class Singleton:
         self.instance = None
 
     def __call__(self, *args, **kwds):
-        if self.instance is None:
+        if self.instance == None:
             self.instance = self.klass(*args, **kwds)
         return self.instance
 
@@ -101,6 +103,7 @@ class BitmapData:
             return True
 
     def GetFirstPixelSize(self):
+
         path = self.data[0][0]
         size = ReadBitmap(path).dtype.itemsize * 8
 
@@ -144,7 +147,7 @@ class BitmapFiles:
 class LoadBitmap:
     def __init__(self, bmp_file, filepath):
         self.bmp_file = bmp_file
-        # self.filepath = utils.decode(filepath, const.FS_ENCODE)
+        #self.filepath = utils.decode(filepath, const.FS_ENCODE)
         self.filepath = filepath
 
         self.run()
@@ -154,15 +157,17 @@ class LoadBitmap:
 
         # ----- verify extension ------------------
         extension = VerifyDataType(self.filepath)
-
+        
         file_name = self.filepath.decode(const.FS_ENCODE).split(os.path.sep)[-1]
-
+        
         n_array = ReadBitmap(self.filepath)
 
         if not (isinstance(n_array, numpy.ndarray)):
             return False
 
-        image = converters.to_vtk(n_array, spacing=(1, 1, 1), slice_number=1, orientation="AXIAL")
+        image = converters.to_vtk(
+            n_array, spacing=(1, 1, 1), slice_number=1, orientation="AXIAL"
+        )
 
         dim = image.GetDimensions()
         x = dim[0]
@@ -175,12 +180,12 @@ class LoadBitmap:
         img.SetAxisMagnificationFactor(2, 1)
         img.Update()
 
-        # tp = img.GetOutput().GetScalarTypeAsString()
+        tp = img.GetOutput().GetScalarTypeAsString()
 
         image_copy = vtkImageData()
         image_copy.DeepCopy(img.GetOutput())
 
-        fd, thumbnail_path = tempfile.mkstemp()
+        thumbnail_path = tempfile.mktemp()
 
         write_png = vtkPNGWriter()
         write_png.SetInputConnection(img.GetOutputPort())
@@ -202,7 +207,7 @@ class LoadBitmap:
 
             vtk_error = False
 
-        id = wx.NewIdRef()
+        id = wx.NewId()
 
         bmp_item = [
             self.filepath,
@@ -214,7 +219,6 @@ class LoadBitmap:
             file_name,
             id,
         ]
-        os.close(fd)
         self.bmp_file.Add(bmp_item)
 
 
@@ -307,7 +311,7 @@ def ScipyRead(filepath):
             return simage
         else:
             return r
-    except OSError:
+    except (IOError):
         return False
 
 
@@ -367,7 +371,7 @@ def ReadBitmap(filepath):
     if _has_win32api:
         filepath = win32api.GetShortPathName(filepath)
 
-    if t is False:
+    if t == False:
         try:
             measures_info = GetPixelSpacingFromInfoFile(filepath)
         except UnicodeDecodeError:
@@ -380,7 +384,8 @@ def ReadBitmap(filepath):
     img_array = VtkRead(filepath, t)
 
     if not (isinstance(img_array, numpy.ndarray)):
-        # no_error = True
+
+        no_error = True
 
         img_array = ScipyRead(filepath)
 
@@ -392,19 +397,20 @@ def ReadBitmap(filepath):
 
 def GetPixelSpacingFromInfoFile(filepath):
     filepath = utils.decode(filepath, const.FS_ENCODE)
-
+    
     if filepath.endswith(".DS_Store"):
         return False
 
-    try:
-        fi = open(filepath)
+    try: 
+        fi = open(filepath, "r")  
         lines = fi.readlines()
-    except UnicodeDecodeError:
-        # fix uCTI from CTI file
+    except(UnicodeDecodeError):
+
+        #fix uCTI from CTI file 
         try:
-            fi = open(filepath, encoding="iso8859-1")
+            fi = open(filepath,"r",encoding="iso8859-1")
             lines = fi.readlines()
-        except UnicodeDecodeError:
+        except(UnicodeDecodeError):
             return False
 
     measure_scale = "mm"
@@ -422,12 +428,12 @@ def GetPixelSpacingFromInfoFile(filepath):
             return [spx * 0.001, spy * 0.001, spz * 0.001]
         else:
             # info text from skyscan
-            for line in lines:
-                if "Pixel Size" in line:
-                    if "um" in line:
+            for l in lines:
+                if "Pixel Size" in l:
+                    if "um" in l:
                         measure_scale = "um"
 
-                    value = line.split("=")[-1]
+                    value = l.split("=")[-1]
                     values.append(value)
 
             if len(values) > 0:
@@ -464,5 +470,5 @@ def VerifyDataType(filepath):
             return t
         else:
             return False
-    except OSError:
+    except IOError:
         return False

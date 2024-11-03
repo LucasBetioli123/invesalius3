@@ -1,10 +1,4 @@
-# distutils: define_macros=NPY_NO_DEPRECATED_API=NPY_1_7_API_VERSION
-# cython: boundscheck=False
-# cython: wraparound=False
-# cython: initializedcheck=False
-# cython: cdivision=True
-# cython: nonecheck=False
-# cython: language_level=3
+#cython: language_level=3
 
 import numpy as np
 cimport numpy as np
@@ -12,7 +6,7 @@ cimport cython
 
 from collections import deque
 
-from cython.parallel cimport prange
+from cython.parallel import prange
 from libc.math cimport floor, ceil
 from libcpp cimport bool
 from libcpp.deque cimport deque as cdeque
@@ -28,11 +22,19 @@ cdef struct s_coord:
 ctypedef s_coord coord
 
 
-cdef inline void append_queue(cdeque[int]& stack, int x, int y, int z, int d, int h, int w) noexcept nogil:
+@cython.boundscheck(False) # turn of bounds-checking for entire function
+@cython.wraparound(False)
+@cython.nonecheck(False)
+@cython.cdivision(True)
+cdef inline void append_queue(cdeque[int]& stack, int x, int y, int z, int d, int h, int w) nogil:
     stack.push_back(z*h*w + y*w + x)
 
 
-cdef inline void pop_queue(cdeque[int]& stack, int* x, int* y, int* z, int d, int h, int w) noexcept nogil:
+@cython.boundscheck(False) # turn of bounds-checking for entire function
+@cython.wraparound(False)
+@cython.nonecheck(False)
+@cython.cdivision(True)
+cdef inline void pop_queue(cdeque[int]& stack, int* x, int* y, int* z, int d, int h, int w) nogil:
     cdef int i = stack.front()
     stack.pop_front()
     x[0] = i % w
@@ -40,6 +42,7 @@ cdef inline void pop_queue(cdeque[int]& stack, int* x, int* y, int* z, int d, in
     z[0] = i / (h * w)
 
 
+@cython.boundscheck(False) # turn of bounds-checking for entire function
 def floodfill(np.ndarray[image_t, ndim=3] data, int i, int j, int k, int v, int fill, np.ndarray[mask_t, ndim=3] out):
 
     cdef int to_return = 0
@@ -88,6 +91,9 @@ def floodfill(np.ndarray[image_t, ndim=3] data, int i, int j, int k, int v, int 
         return out
 
 
+@cython.boundscheck(False) # turn of bounds-checking for entire function
+@cython.wraparound(False)
+@cython.nonecheck(False)
 def floodfill_threshold(np.ndarray[image_t, ndim=3] data, list seeds, int t0, int t1, int fill, np.ndarray[mask_t, ndim=3] strct, np.ndarray[mask_t, ndim=3] out):
 
     cdef int to_return = 0
@@ -154,6 +160,9 @@ def floodfill_threshold(np.ndarray[image_t, ndim=3] data, list seeds, int t0, in
         return out
 
 
+@cython.boundscheck(False) # turn of bounds-checking for entire function
+@cython.wraparound(False)
+@cython.nonecheck(False)
 def floodfill_auto_threshold(np.ndarray[image_t, ndim=3] data, list seeds, float p, int fill, np.ndarray[mask_t, ndim=3] out):
 
     cdef int to_return = 0
@@ -227,6 +236,9 @@ def floodfill_auto_threshold(np.ndarray[image_t, ndim=3] data, list seeds, float
         return out
 
 
+@cython.boundscheck(False)
+@cython.wraparound(False)
+@cython.nonecheck(False)
 def fill_holes_automatically(np.ndarray[mask_t, ndim=3] mask, np.ndarray[np.uint16_t, ndim=3] labels, unsigned int nlabels, unsigned int max_size):
     """
     Fill mask holes automatically. The hole must <= max_size. Return True if any hole were filled.

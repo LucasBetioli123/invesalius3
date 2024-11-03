@@ -23,23 +23,15 @@ import json
 import pathlib
 import sys
 from itertools import chain
-from types import ModuleType
-from typing import TYPE_CHECKING
 
-from invesalius import inv_paths
 from invesalius.pubsub import pub as Publisher
 
-if TYPE_CHECKING:
-    import os
+from invesalius import inv_paths
 
 
-def import_source(module_name: str, module_file_path: "str | bytes | os.PathLike") -> ModuleType:
+def import_source(module_name, module_file_path):
     module_spec = importlib.util.spec_from_file_location(module_name, module_file_path)
-    if module_spec is None:
-        raise ImportError(f"No module named {module_name}")
     module = importlib.util.module_from_spec(module_spec)
-    if module_spec.loader is None:
-        raise ImportError(f"Loader is None for module {module_name}")
     module_spec.loader.exec_module(module)
     return module
 
@@ -49,16 +41,14 @@ class PluginManager:
         self.plugins = {}
         self.__bind_pubsub_evt()
 
-    def __bind_pubsub_evt(self) -> None:
+    def __bind_pubsub_evt(self):
         Publisher.subscribe(self.load_plugin, "Load plugin")
 
-    def find_plugins(self) -> None:
+    def find_plugins(self):
         self.plugins = {}
         for p in chain(
-            glob.glob(str(inv_paths.PLUGIN_DIRECTORY.joinpath("**/plugin.json")), recursive=True),
-            glob.glob(
-                str(inv_paths.USER_PLUGINS_DIRECTORY.joinpath("**/plugin.json")), recursive=True
-            ),
+                glob.glob(str(inv_paths.PLUGIN_DIRECTORY.joinpath("**/plugin.json")), recursive=True),
+                glob.glob(str(inv_paths.USER_PLUGINS_DIRECTORY.joinpath("**/plugin.json")), recursive=True),
         ):
             try:
                 p = pathlib.Path(p)
@@ -75,11 +65,11 @@ class PluginManager:
                         "enable_startup": enable_startup,
                     }
             except Exception as err:
-                print(f"It was not possible to load plugin. Error: {err}")
+                print("It was not possible to load plugin. Error: {}".format(err))
 
         Publisher.sendMessage("Add plugins menu items", items=self.plugins)
 
-    def load_plugin(self, plugin_name: str) -> None:
+    def load_plugin(self, plugin_name):
         if plugin_name in self.plugins:
             plugin_module = import_source(
                 plugin_name, self.plugins[plugin_name]["folder"].joinpath("__init__.py")

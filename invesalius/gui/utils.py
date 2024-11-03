@@ -16,12 +16,10 @@
 #    PARTICULAR. Consulte a Licenca Publica Geral GNU para obter mais
 #    detalhes.
 # --------------------------------------------------------------------
-from typing import TYPE_CHECKING
 
-if TYPE_CHECKING:
-    import wx
+import wx
 
 
-def calc_width_needed(widget: "wx.Window", num_chars: int) -> int:
+def calc_width_needed(widget, num_chars):
     width, height = widget.GetTextExtent("M" * num_chars)
     return width

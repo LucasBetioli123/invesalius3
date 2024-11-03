@@ -17,13 +17,12 @@
 #    PARTICULAR. Consulte a Licenca Publica Geral GNU para obter mais
 #    detalhes.
 # ---------------------------------------------------------------------
+# import gdcm
+import sys
 import time
-
-import gdcm
 
 import invesalius.constants as const
 import invesalius.utils as utils
-from invesalius.i18n import tr as _
 
 # In DICOM file format, if multiple values are present for the
 # "Window Center" (Level) and "Window Width", both attributes
@@ -168,8 +167,10 @@ class Parser:
         return time.strftime("%H:%M:%S", data)
 
     def __format_date(self, value):
+
         sp1 = value.split(".")
         try:
+
             if len(sp1) > 1:
                 if len(sp1[0]) <= 2:
                     data = time.strptime(value, "%D.%M.%Y")
@@ -181,7 +182,7 @@ class Parser:
                 data = time.strptime(value, "%Y%M%d")
             return time.strftime("%d/%M/%Y", data)
 
-        except ValueError:
+        except (ValueError):
             return ""
 
     def GetImageOrientationLabel(self):
@@ -300,7 +301,7 @@ class Parser:
         # TODO: internationalize data
         try:
             date = self.data_image[str(0x0008)][str(0x0022)]
-        except KeyError:
+        except (KeyError):
             return ""
 
         if (date) and (date != ""):
@@ -325,15 +326,28 @@ class Parser:
 
         DICOM standard tag (0x0008, 0x0050) was used.
         """
-        return ""
         # data = self.data_image[0x008][0x050]
-        # if data:
-        #     try:
-        #         value = int(str(data))
-        #     except ValueError:  # Problem in the other\iCatDanielaProjeto
-        #         value = 0
-        #     return value
-        # return ""
+        return ""
+        if data:
+            try:
+                value = int(str(data))
+            except (ValueError):  # Problem in the other\iCatDanielaProjeto
+                value = 0
+            return value
+        return ""
+
+    def GetAcquisitionTime(self):
+        """
+        Return string containing the acquisition time using the
+        format "hh:mm:ss".
+        Return "" (empty string) if not set.
+
+        DICOM standard tag (0x0008,0x0032) was used.
+        """
+        data = self.data_image[str(0x008)][str(0x032)]
+        if (data) and (data != ""):
+            return self.__format_time(str(data))
+        return ""
 
     def GetPatientAdmittingDiagnosis(self):
         """
@@ -365,7 +379,7 @@ class Parser:
         """
         try:
             data = self.data_image[str(0x028)][str(0x1050)]
-        except KeyError:
+        except (KeyError):
             return "300"
         if data:
             # Usually 'data' is a number. However, in some DICOM
@@ -397,7 +411,7 @@ class Parser:
         """
         try:
             data = self.data_image[str(0x028)][str(0x1051)]
-        except KeyError:
+        except (KeyError):
             return "2000"
 
         if data:
@@ -426,10 +440,10 @@ class Parser:
         """
         try:
             data = self.data_image[str(0x020)][str(0x032)].replace(",", ".")
-        except KeyError:
+        except (KeyError):
             return ""
         if data:
-            return [float(value) for value in data.split("\\")]
+            return [eval(value) for value in data.split("\\")]
         return ""
 
     def GetImageLocation(self):
@@ -442,7 +456,7 @@ class Parser:
         """
         data = self.data_image[str(0x020)][str(0x1041)]
         if data:
-            return float(data)
+            return eval(data)
         return ""
 
     def GetImageOffset(self):
@@ -454,7 +468,7 @@ class Parser:
         """
         try:
             data = self.data_image[str(0x7FE0)][str(0x0010)]
-        except KeyError:
+        except (KeyError):
             return ""
 
         if data:
@@ -471,7 +485,7 @@ class Parser:
         """
         try:
             data = self.data_image[str(0x020)][str(0x011)]
-        except KeyError:
+        except (KeyError):
             return ""
 
         if (data) and (data != '""') and (data != "None"):
@@ -514,7 +528,7 @@ class Parser:
         """
         try:
             data = self.data_image[str(0x0010)][str(0x1030)]
-        except KeyError:
+        except (KeyError):
             return ""
 
         if data:
@@ -530,7 +544,7 @@ class Parser:
         """
         try:
             data = self.data_image[str(0x010)][str(0x1020)]
-        except KeyError:
+        except (KeyError):
             return ""
 
         if data:
@@ -545,7 +559,7 @@ class Parser:
         """
         try:
             data = self.data_image[str(0x010)][str(0x1040)]
-        except KeyError:
+        except (KeyError):
             return ""
         if data:
             return data
@@ -560,7 +574,7 @@ class Parser:
         """
         try:
             data = self.data_image[str(0x010)][str(0x1080)]
-        except KeyError:
+        except (KeyError):
             return ""
         if data:
             return data
@@ -577,7 +591,7 @@ class Parser:
         """
         try:
             data = self.data_image[str(0x010)][str(0x1081)]
-        except KeyError:
+        except (KeyError):
             return ""
         if data:
             return data
@@ -593,7 +607,7 @@ class Parser:
         """
         try:
             data = self.data_image[str(0x0010)][str(0x2150)]
-        except KeyError:
+        except (KeyError):
             return ""
 
         if data:
@@ -610,7 +624,7 @@ class Parser:
         """
         try:
             data = self.data_image[str(0x0010)][str(0x2152)]
-        except KeyError:
+        except (KeyError):
             return ""
 
         if data:
@@ -626,7 +640,7 @@ class Parser:
         """
         try:
             data = self.data_image[str(0x0010)][str(0x2154)]
-        except KeyError:
+        except (KeyError):
             return ""
 
         if data:
@@ -643,7 +657,7 @@ class Parser:
         """
         try:
             data = self.data_image[str(0x0010)][str(0x2297)]
-        except KeyError:
+        except (KeyError):
             return ""
 
         if data:
@@ -660,7 +674,7 @@ class Parser:
         """
         try:
             data = self.data_image[str(0x0010)][str(0x2298)]
-        except KeyError:
+        except (KeyError):
             return ""
 
         if data:
@@ -677,7 +691,7 @@ class Parser:
         """
         try:
             data = self.data_image[str(0x0010)][str(0x2299)]
-        except KeyError:
+        except (KeyError):
             return ""
 
         if data:
@@ -694,7 +708,7 @@ class Parser:
         """
         try:
             data = self.data_image[str(0x0010)][str(0x2000)]
-        except KeyError:
+        except (KeyError):
             return ""
 
         if data:
@@ -711,7 +725,7 @@ class Parser:
         """
         try:
             data = self.data_image[str(0x0008)][str(0x2110)]
-        except KeyError:
+        except (KeyError):
             return ""
 
         if data:
@@ -728,7 +742,7 @@ class Parser:
         """
         try:
             data = self.data_image[str(0x0008)][str(0x0090)]
-        except KeyError:
+        except (KeyError):
             return ""
 
         if data == "None":
@@ -746,7 +760,7 @@ class Parser:
         """
         try:
             data = self.data_image[str(0x0008)][str(0x0092)]
-        except KeyError:
+        except (KeyError):
             return ""
 
         if data:
@@ -762,12 +776,28 @@ class Parser:
         """
         try:
             data = self.data_image[str(0x0008)][str(0x0094)]
-        except KeyError:
+        except (KeyError):
             return ""
 
         if data:
             return data
         return ""
+
+    def GetProtocolName(self):
+        """
+        Return string containing the protocal name
+        used in the acquisition
+
+        DICOM standard tag (0x0018, 0x1030) was used.
+        """
+        try:
+            data = self.data_image[str(0x0018)][str(0x1030)]
+        except (KeyError):
+            return None
+
+        if data:
+            return data
+        return None
 
     def GetImageType(self):
         """
@@ -780,7 +810,7 @@ class Parser:
         """
         try:
             data = self.data_image[str(0x008)][str(0x008)]
-        except IndexError:
+        except (IndexError):
             return []
         # TODO: Check if set image type to empty is the right way of handling
         # the cases where there is not this tag.
@@ -790,7 +820,7 @@ class Parser:
         if data:
             try:
                 return data.split("\\")
-            except IndexError:
+            except (IndexError):
                 return []
         return []
 
@@ -804,7 +834,7 @@ class Parser:
         """
         try:
             data = self.data_image[str(0x0008)][str(0x0016)]
-        except KeyError:
+        except (KeyError):
             return ""
 
         if data:
@@ -821,7 +851,24 @@ class Parser:
         """
         try:
             data = self.data_image[str(0x0008)][str(0x0018)]
-        except KeyError:
+        except (KeyError):
+            return ""
+
+        if data:
+            return data
+        return ""
+
+    def GetStudyInstanceUID(self):
+        """
+        Return string containing Unique Identifier of the
+        Study Instance.
+        Return "" if field is not defined.
+
+        Critical DICOM Tag (0x0020,0x000D). Cannot be edited.
+        """
+        try:
+            data = self.data_image[str(0x0020)][str(0x000D)]
+        except (KeyError):
             return ""
 
         if data:
@@ -841,7 +888,7 @@ class Parser:
         """
         try:
             data = self.data_image[str(0x0020)][str(0x0037)].replace(",", ".")
-        except KeyError:
+        except (KeyError):
             return [1.0, 0.0, 0.0, 0.0, 1.0, 0.0]
 
         if data:
@@ -859,7 +906,7 @@ class Parser:
         """
         try:
             data = self.data_image[str(0x0020)][str(0x0037)]
-        except KeyError:
+        except (KeyError):
             return [0.0, 1.0, 0.0]
 
         if data:
@@ -877,7 +924,7 @@ class Parser:
         """
         try:
             data = self.data_image[str(0x0020)][str(0x0037)]
-        except KeyError:
+        except (KeyError):
             return [1.0, 0.0, 0.0]
 
         if data:
@@ -893,7 +940,7 @@ class Parser:
         """
         try:
             data = self.data_image[str(0x0020)][str(0x0052)]
-        except KeyError:
+        except (KeyError):
             return ""
 
         if data:
@@ -976,7 +1023,7 @@ class Parser:
             data = self.data_image[str(0x0018)][str(0x1030)]
             if data:
                 return data
-        except KeyError:
+        except (KeyError):
             return ""
         return ""
 
@@ -998,7 +1045,7 @@ class Parser:
         """
         try:
             data = self.data_image[str(0x0018)][str(0x0020)]
-        except KeyError:
+        except (KeyError):
             return ""
 
         if data:
@@ -1014,7 +1061,7 @@ class Parser:
         """
         try:
             data = self.data_image[str(0x0008)][str(0x0080)]
-        except KeyError:
+        except (KeyError):
             return ""
 
         if data:
@@ -1032,7 +1079,7 @@ class Parser:
         """
         try:
             data = self.data_image[str(0x0008)][str(0x0081)]
-        except KeyError:
+        except (KeyError):
             return ""
 
         if data:
@@ -1049,7 +1096,7 @@ class Parser:
         """
         try:
             data = self.data_image[str(0x0020)][str(0x000D)]
-        except KeyError:
+        except (KeyError):
             return ""
 
         if data:
@@ -1065,7 +1112,7 @@ class Parser:
         """
         try:
             data = self.data_image[str(0x0010)][str(0x2180)]
-        except KeyError:
+        except (KeyError):
             return ""
 
         if data:
@@ -1103,7 +1150,7 @@ class Parser:
         # res = sf.ToStringPair(tag)
         try:
             data = self.data_image[str(0x0028)][str(0x0100)]
-        except KeyError:
+        except (KeyError):
             return ""
 
         if data:
@@ -1133,7 +1180,7 @@ class Parser:
         # TODO: internationalize data
         try:
             data = self.data_image[str(0x0010)][str(0x0030)]
-        except KeyError:
+        except (KeyError):
             return ""
 
         if (data) and (data != "None"):
@@ -1149,7 +1196,7 @@ class Parser:
         """
         try:
             data = self.data_image[str(0x0020)][str(0x0010)]
-        except KeyError:
+        except (KeyError):
             return ""
 
         if data:
@@ -1166,7 +1213,7 @@ class Parser:
         """
         try:
             data = self.data_image[str(0x0018)][str(0x1120)]
-        except KeyError:
+        except (KeyError):
             return 0.0
 
         if data:
@@ -1185,7 +1232,7 @@ class Parser:
         """
         try:
             data = self.data_image[str(0x0010)][str(0x0040)]
-        except KeyError:
+        except (KeyError):
             return ""
 
         if data:
@@ -1194,7 +1241,7 @@ class Parser:
             try:
                 # Returns a unicode decoded in the own dicom encoding
                 return utils.decode(name, encoding, "replace")
-            except UnicodeEncodeError:
+            except (UnicodeEncodeError):
                 return name
 
         return ""
@@ -1209,7 +1256,7 @@ class Parser:
         """
         try:
             data = self.data_image[str(0x0010)][str(0x1010)]
-        except KeyError:
+        except (KeyError):
             return ""
 
         if data:
@@ -1229,7 +1276,7 @@ class Parser:
         """
         try:
             data = self.data_image[str(0x0010)][str(0x0010)]
-        except KeyError:
+        except (KeyError):
             return ""
 
         encoding = self.GetEncoding()
@@ -1249,7 +1296,7 @@ class Parser:
         """
         try:
             data = self.data_image[str(0x0010)][str(0x0020)]
-        except KeyError:
+        except (KeyError):
             return ""
 
         if data:
@@ -1257,7 +1304,7 @@ class Parser:
             # Returns a unicode decoded in the own dicom encoding
             try:
                 return utils.decode(data, encoding, "replace")
-            except UnicodeEncodeError:
+            except (UnicodeEncodeError):
                 return data
         return ""
 
@@ -1271,7 +1318,7 @@ class Parser:
         """
         try:
             data = self.data_image[str(0x0018)][str(0x1151)]
-        except KeyError:
+        except (KeyError):
             return ""
 
         if data:
@@ -1288,7 +1335,7 @@ class Parser:
         """
         try:
             data = self.data_image[str(0x0018)][str(0x1152)]
-        except KeyError:
+        except (KeyError):
             return ""
 
         if data:
@@ -1305,7 +1352,7 @@ class Parser:
         """
         try:
             data = self.data_image[str(0x0018)][str(0x0060)]
-        except KeyError:
+        except (KeyError):
             return ""
 
         if data:
@@ -1322,7 +1369,7 @@ class Parser:
         """
         try:
             data = self.data_image[str(0x0018)][str(0x0050)].replace(",", ".")
-        except KeyError:
+        except (KeyError):
             return 0
         if data:
             return float(data)
@@ -1340,7 +1387,7 @@ class Parser:
         """
         try:
             data = self.data_image[str(0x0018)][str(0x1210)]
-        except KeyError:
+        except (KeyError):
             return ""
 
         if data:
@@ -1357,7 +1404,7 @@ class Parser:
         """
         try:
             data = self.data_image[str(0x0008)][str(0x0080)]
-        except KeyError:
+        except (KeyError):
             return ""
 
         if data:
@@ -1374,7 +1421,7 @@ class Parser:
         """
         try:
             data = self.data_image[str(0x0008)][str(0x1010)]
-        except KeyError:
+        except (KeyError):
             return ""
 
         if data:
@@ -1391,7 +1438,7 @@ class Parser:
         """
         try:
             data = self.data_image[str(0x0008)][str(0x1090)]
-        except KeyError:
+        except (KeyError):
             return ""
 
         if data:
@@ -1405,7 +1452,7 @@ class Parser:
         """
         try:
             data = self.data_image[str(0x0008)][str(0x0070)]
-        except KeyError:
+        except (KeyError):
             return ""
 
         if data:
@@ -1421,7 +1468,7 @@ class Parser:
         """
         try:
             data = self.data_image[str(0x0008)][str(0x1010)]
-        except KeyError:
+        except (KeyError):
             return ""
 
         if data:
@@ -1439,7 +1486,7 @@ class Parser:
         """
         try:
             data = self.data_image[str(0x0008)][str(0x0060)]
-        except KeyError:
+        except (KeyError):
             return ""
 
         if data:
@@ -1455,7 +1502,7 @@ class Parser:
         """
         try:
             data = self.data_image[str(0x0020)][str(0x0013)]
-        except KeyError:
+        except (KeyError):
             return 0
 
         if data:
@@ -1474,7 +1521,7 @@ class Parser:
             if data:
                 encoding = self.GetEncoding()
                 return utils.decode(data, encoding, "replace")
-        except KeyError:
+        except (KeyError):
             return ""
 
     def GetStudyAdmittingDiagnosis(self):
@@ -1501,7 +1548,7 @@ class Parser:
         """
         try:
             data = self.data_image[str(0x0008)][str(0x103E)]
-        except KeyError:
+        except (KeyError):
             return _("unnamed")
 
         encoding = self.GetEncoding()
@@ -1524,7 +1571,7 @@ class Parser:
         """
         try:
             data = self.data_image[str(0x0008)][str(0x0033)]
-        except KeyError:
+        except (KeyError):
             return ""
 
         if (data) and (data != "None"):
@@ -1538,7 +1585,7 @@ class Parser:
         """
         try:
             data = self.data_image[str(0x0008)][str(0x0032)]
-        except KeyError:
+        except (KeyError):
             return ""
 
         if data:
@@ -1552,7 +1599,7 @@ class Parser:
         """
         try:
             data = self.data_image[str(0x0020)][str(0x0011)]
-        except KeyError:
+        except (KeyError):
             return ""
 
         if data:
@@ -1567,11 +1614,12 @@ class Parser:
         try:
             encoding_value = self.data_image[str(0x0008)][str(0x0005)]
             return const.DICOM_ENCODING_TO_PYTHON[encoding_value]
-        except KeyError:
+        except (KeyError):
             return "ISO_IR_100"
 
 
 class DicomWriter:
+
     """
     This class is dicom to edit files and create new
     files with images of dicom vtkImageData.
@@ -1600,10 +1648,12 @@ class DicomWriter:
     """
 
     def __init__(self):
+
+        self.reader = ""
         self.anony = gdcm.Anonymizer()
         self.path = ""
-        self.new_dicom = vtkgdcm.vtkGDCMImageWriter()  # noqa: F821
-        self.reader = gdcm.Reader()
+        self.new_dicom = vtkgdcm.vtkGDCMImageWriter()
+        reader = self.reader = gdcm.Reader()
 
     def SetFileName(self, path):
         """
@@ -1614,6 +1664,7 @@ class DicomWriter:
         self.reader.SetFileName(path)
 
         if self.reader.Read():
+
             self.anony.SetFile(self.reader.GetFile())
 
     def SetInput(self, img_data):
@@ -1646,7 +1697,8 @@ class DicomWriter:
         self.anony.SetFile(self.reader.GetFile())
 
     def Save(self):
-        # reader = self.reader
+
+        reader = self.reader
 
         writer = gdcm.Writer()
         writer.SetFile(self.reader.GetFile())
@@ -1681,7 +1733,7 @@ class DicomWriter:
         """
         Set slice location value requeries float type
         """
-        self.anony.Replace(gdcm.Tag(0x0020, 0x1041), str(location))
+        self.anony.Replace(gdcm.Tag(0x0020, 0x1041), str(number))
 
     def SetImagePosition(self, position):
         """
@@ -1758,6 +1810,7 @@ def DumpDictionary(filename, dictionary=info):
 
 
 if __name__ == "__main__":
+
     # Example of how to use Parser
     fail_count = 0
     total = 48
@@ -1795,7 +1848,7 @@ if __name__ == "__main__":
             # print info
 
 
-class Dicom:
+class Dicom(object):
     def __init__(self):
         pass
 
@@ -1820,7 +1873,7 @@ class Dicom:
         self.acquisition.SetParser(self.parser)
 
 
-class Patient:
+class Patient(object):
     def __init__(self):
         pass
 
@@ -1833,7 +1886,7 @@ class Patient:
         self.physician = parser.GetPhysicianReferringName()
 
 
-class Acquisition:
+class Acquisition(object):
     def __init__(self):
         pass
 
@@ -1854,7 +1907,7 @@ class Acquisition:
         self.sop_class_uid = parser.GetSOPClassUID()
 
 
-class Image:
+class Image(object):
     def __init__(self):
         pass
 
