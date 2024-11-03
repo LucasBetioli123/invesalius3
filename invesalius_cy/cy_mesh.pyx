@@ -1,11 +1,9 @@
-# distutils: language = c++
-# distutils: define_macros=NPY_NO_DEPRECATED_API=NPY_1_7_API_VERSION
-# cython: boundscheck=False
-# cython: wraparound=False
-# cython: initializedcheck=False
-# cython: cdivision=True
-# cython: nonecheck=False
-# cython: language_level=3
+#distutils: language = c++
+#cython: boundscheck=False
+#cython: wraparound=False
+#cython: initializedcheck=False
+#cython: cdivision=True
+#cython: nonecheck=False
 
 import os
 import sys
@@ -22,7 +20,7 @@ from libcpp.vector cimport vector
 from libcpp.pair cimport pair
 from libcpp cimport bool
 from libcpp.deque cimport deque as cdeque
-from cython.parallel cimport prange
+from cython.parallel import prange
 cimport openmp
 
 from .cy_my_types cimport vertex_t, normal_t, vertex_id_t
@@ -140,13 +138,13 @@ cdef class Mesh:
 
         return pd
 
-    cdef vector[vertex_id_t]* get_faces_by_vertex(self, int v_id) noexcept nogil:
+    cdef vector[vertex_id_t]* get_faces_by_vertex(self, int v_id) nogil:
         """
         Returns the faces whose vertex `v_id' is part.
         """
         return &self.map_vface[v_id]
 
-    cdef set[vertex_id_t]* get_ring1(self, vertex_id_t v_id) noexcept nogil:
+    cdef set[vertex_id_t]* get_ring1(self, vertex_id_t v_id) nogil:
         """
         Returns the ring1 of vertex `v_id'
         """
@@ -166,13 +164,13 @@ cdef class Mesh:
 
         return ring1
 
-    cdef bool is_border(self, vertex_id_t v_id) noexcept nogil:
+    cdef bool is_border(self, vertex_id_t v_id) nogil:
         """
         Check if vertex `v_id' is a vertex border.
         """
         return self.border_vertices.find(v_id) != self.border_vertices.end()
 
-    cdef vector[vertex_id_t]* get_near_vertices_to_v(self, vertex_id_t v_id, float dmax) noexcept nogil:
+    cdef vector[vertex_id_t]* get_near_vertices_to_v(self, vertex_id_t v_id, float dmax) nogil:
         """
         Returns all vertices with distance at most `d' to the vertex `v_id'
 
@@ -226,7 +224,7 @@ cdef class Mesh:
         return near_vertices
 
 
-cdef vector[weight_t]* calc_artifacts_weight(Mesh mesh, vector[vertex_id_t]& vertices_staircase, float tmax, float bmin) noexcept nogil:
+cdef vector[weight_t]* calc_artifacts_weight(Mesh mesh, vector[vertex_id_t]& vertices_staircase, float tmax, float bmin) nogil:
     """
     Calculate the artifact weight based on distance of each vertex to its
     nearest staircase artifact vertex.
@@ -299,7 +297,7 @@ cdef vector[weight_t]* calc_artifacts_weight(Mesh mesh, vector[vertex_id_t]& ver
     return weights
 
 
-cdef inline Point calc_d(Mesh mesh, vertex_id_t v_id) noexcept nogil:
+cdef inline Point calc_d(Mesh mesh, vertex_id_t v_id) nogil:
     cdef Point D
     cdef int nf, f_id, nid
     cdef float n=0
@@ -350,7 +348,7 @@ cdef inline Point calc_d(Mesh mesh, vertex_id_t v_id) noexcept nogil:
     D.z = D.z / n
     return D
 
-cdef vector[vertex_id_t]* find_staircase_artifacts(Mesh mesh, double[3] stack_orientation, double T) noexcept nogil:
+cdef vector[vertex_id_t]* find_staircase_artifacts(Mesh mesh, double[3] stack_orientation, double T) nogil:
     """
     This function is used to find vertices at staircase artifacts, which are
     those vertices whose incident faces' orientation differences are
@@ -416,7 +414,7 @@ cdef vector[vertex_id_t]* find_staircase_artifacts(Mesh mesh, double[3] stack_or
     return output
 
 
-cdef void taubin_smooth(Mesh mesh, vector[weight_t]& weights, float l, float m, int steps) noexcept nogil:
+cdef void taubin_smooth(Mesh mesh, vector[weight_t]& weights, float l, float m, int steps):
     """
     Implementation of Taubin's smooth algorithm described in the paper "A
     Signal Processing Approach To Fair Surface Design". His benefeat is it

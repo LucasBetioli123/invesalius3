@@ -39,28 +39,32 @@ OLD_USER_LOG_DIR = OLD_USER_INV_DIR.joinpath("logs")
 
 INV_TOP_DIR = pathlib.Path(__file__).parent.parent.resolve()
 
-PLUGIN_DIRECTORY = INV_TOP_DIR.joinpath("plugins")
+PLUGIN_DIRECTORY = INV_TOP_DIR.joinpath("plugins") 
 
 ICON_DIR = INV_TOP_DIR.joinpath("icons")
 SAMPLE_DIR = INV_TOP_DIR.joinpath("samples")
 DOC_DIR = INV_TOP_DIR.joinpath("docs")
 RAYCASTING_PRESETS_DIRECTORY = INV_TOP_DIR.joinpath("presets", "raycasting")
-RAYCASTING_PRESETS_COLOR_DIRECTORY = INV_TOP_DIR.joinpath("presets", "raycasting", "color_list")
+RAYCASTING_PRESETS_COLOR_DIRECTORY = INV_TOP_DIR.joinpath(
+    "presets", "raycasting", "color_list"
+)
 
 MODELS_DIR = INV_TOP_DIR.joinpath("ai")
-LOCALE_DIR = INV_TOP_DIR.joinpath("locale")
 
 # Inside the windows executable
 if hasattr(sys, "frozen") and (
-    getattr(sys, "frozen") == "windows_exe" or getattr(sys, "frozen") == "console_exe"
+    sys.frozen == "windows_exe" or sys.frozen == "console_exe"
 ):
     abs_path = INV_TOP_DIR.parent.resolve()
     ICON_DIR = abs_path.joinpath("icons")
     SAMPLE_DIR = INV_TOP_DIR.joinpath("samples")
     DOC_DIR = INV_TOP_DIR.joinpath("docs")
     RAYCASTING_PRESETS_DIRECTORY = abs_path.joinpath("presets", "raycasting")
-    RAYCASTING_PRESETS_COLOR_DIRECTORY = abs_path.joinpath("presets", "raycasting", "color_list")
+    RAYCASTING_PRESETS_COLOR_DIRECTORY = abs_path.joinpath(
+        "presets", "raycasting", "color_list"
+    )
 else:
+
     ICON_DIR = pathlib.Path(os.environ.get("INV_ICON_DIR", ICON_DIR))
     SAMPLE_DIR = pathlib.Path(os.environ.get("INV_SAMPLE_DIR", SAMPLE_DIR))
     DOC_DIR = pathlib.Path(os.environ.get("INV_DOC_DIR", DOC_DIR))
@@ -82,9 +86,7 @@ NDI_MAR_DIR_REF = str(INV_TOP_DIR.joinpath("navigation", "ndi_files", "Markers",
 NDI_MAR_DIR_OBJ = str(INV_TOP_DIR.joinpath("navigation", "ndi_files", "Markers", "8700338.rom"))
 
 OPTITRACK_CAL_DIR = str(INV_TOP_DIR.joinpath("navigation", "optitrack_files", "Calibration.cal"))
-OPTITRACK_USERPROFILE_DIR = str(
-    INV_TOP_DIR.joinpath("navigation", "optitrack_files", "UserProfile.motive")
-)
+OPTITRACK_USERPROFILE_DIR = str(INV_TOP_DIR.joinpath("navigation", "optitrack_files", "UserProfile.motive"))
 # MAC App
 if not os.path.exists(ICON_DIR):
     ICON_DIR = INV_TOP_DIR.parent.parent.joinpath("icons").resolve()
@@ -92,7 +94,7 @@ if not os.path.exists(ICON_DIR):
     DOC_DIR = INV_TOP_DIR.parent.parent.joinpath("docs").resolve()
 
 
-def create_conf_folders() -> None:
+def create_conf_folders():
     USER_INV_DIR.mkdir(parents=True, exist_ok=True)
     USER_PRESET_DIR.mkdir(parents=True, exist_ok=True)
     USER_LOG_DIR.mkdir(parents=True, exist_ok=True)
@@ -100,12 +102,14 @@ def create_conf_folders() -> None:
     USER_PLUGINS_DIRECTORY.mkdir(parents=True, exist_ok=True)
 
 
-def copy_old_files() -> None:
+def copy_old_files():
     for f in OLD_USER_INV_DIR.glob("*"):
         if f.is_file():
             print(
                 shutil.copy(
                     f,
-                    USER_INV_DIR.joinpath(str(f).replace(str(OLD_USER_INV_DIR) + "/", "")),
+                    USER_INV_DIR.joinpath(
+                        str(f).replace(str(OLD_USER_INV_DIR) + "/", "")
+                    ),
                 )
             )

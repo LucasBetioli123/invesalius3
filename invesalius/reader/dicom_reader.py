@@ -18,6 +18,9 @@
 # --------------------------------------------------------------------------
 import os
 import sys
+import tempfile
+import threading
+from multiprocessing import cpu_count
 
 import gdcm
 
@@ -28,12 +31,15 @@ try:
 except AttributeError:
     pass
 
+import glob
+import plistlib
 
 from vtkmodules.vtkCommonCore import vtkFileOutputWindow, vtkOutputWindow
 
 import invesalius.constants as const
 import invesalius.reader.dicom as dicom
 import invesalius.reader.dicom_grouper as dicom_grouper
+import invesalius.session as ses
 import invesalius.utils as utils
 from invesalius import inv_paths
 from invesalius.data import imagedata_utils
@@ -48,6 +54,25 @@ if sys.platform == "win32":
         _has_win32api = False
 else:
     _has_win32api = False
+
+
+def ReadDicomGroup(dir_):
+
+    patient_group = GetDicomGroups(dir_)
+    if len(patient_group) > 0:
+        filelist, dicom, zspacing = SelectLargerDicomGroup(patient_group)
+        filelist = SortFiles(filelist, dicom)
+        size = dicom.image.size
+        bits = dicom.image.bits_allocad
+
+        imagedata = CreateImageData(filelist, zspacing, size, bits)
+
+        session = ses.Session()
+        session.SetConfig('project_status', const.PROJECT_STATUS_NEW)
+
+        return imagedata, dicom
+    else:
+        return False
 
 
 def SelectLargerDicomGroup(patient_group):
@@ -95,7 +120,9 @@ class LoadDicom:
         if _has_win32api:
             try:
                 reader.SetFileName(
-                    utils.encode(win32api.GetShortPathName(self.filepath), const.FS_ENCODE)
+                    utils.encode(
+                        win32api.GetShortPathName(self.filepath), const.FS_ENCODE
+                    )
                 )
             except TypeError:
                 reader.SetFileName(win32api.GetShortPathName(self.filepath))
@@ -113,6 +140,7 @@ class LoadDicom:
             stf = gdcm.StringFilter()
             stf.SetFile(file)
 
+            field_dict = {}
             data_dict = {}
 
             tag = gdcm.Tag(0x0008, 0x0005)
@@ -150,7 +178,7 @@ class LoadDicom:
 
                     tag_labels[stag] = data[0]
 
-                    if group not in data_dict.keys():
+                    if not group in data_dict.keys():
                         data_dict[group] = {}
 
                     if not (utils.VerifyInvalidPListCharacter(data[1])):
@@ -175,11 +203,13 @@ class LoadDicom:
 
                     tag_labels[stag] = data[0]
 
-                    if group not in data_dict.keys():
+                    if not group in data_dict.keys():
                         data_dict[group] = {}
 
                     if not (utils.VerifyInvalidPListCharacter(data[1])):
-                        data_dict[group][field] = utils.decode(data[1], encoding, "replace")
+                        data_dict[group][field] = utils.decode(
+                            data[1], encoding, "replace"
+                        )
                     else:
                         data_dict[group][field] = "Invalid Character"
 
@@ -216,14 +246,18 @@ class LoadDicom:
             # ----------  Verify is DICOMDir -------------------------------
             is_dicom_dir = 1
             try:
-                if data_dict[str(0x002)][str(0x002)] != "1.2.840.10008.1.3.10":  # DICOMDIR
+                if (
+                    data_dict[str(0x002)][str(0x002)] != "1.2.840.10008.1.3.10"
+                ):  # DICOMDIR
                     is_dicom_dir = 0
-            except KeyError:
+            except (KeyError):
                 is_dicom_dir = 0
 
             if not (is_dicom_dir):
                 parser = dicom.Parser()
-                parser.SetDataImage(dict_file[self.filepath], self.filepath, thumbnail_path)
+                parser.SetDataImage(
+                    dict_file[self.filepath], self.filepath, thumbnail_path
+                )
 
                 dcm = dicom.Dicom()
                 # self.l.acquire()
@@ -320,6 +354,7 @@ class ProgressDicomReader:
         Publisher.sendMessage("End dicom load", patient_series=patient_list)
 
     def GetDicomGroups(self, path, recursive):
+
         if not const.VTK_WARNING:
             log_path = utils.encode(
                 str(inv_paths.USER_LOG_DIR.joinpath("vtkoutput.txt")), const.FS_ENCODE

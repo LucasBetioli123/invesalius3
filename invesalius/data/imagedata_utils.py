@@ -18,15 +18,15 @@
 # --------------------------------------------------------------------------
 
 import math
-import os
+import sys
 import tempfile
 
 import gdcm
 import imageio
+import numpy
 import numpy as np
+
 from scipy.ndimage import shift, zoom
-from skimage.color import rgb2gray
-from skimage.measure import label
 from vtkmodules.util import numpy_support
 from vtkmodules.vtkFiltersCore import vtkImageAppend
 from vtkmodules.vtkImagingCore import vtkExtractVOI, vtkImageClip, vtkImageResample
@@ -37,10 +37,18 @@ from vtkmodules.vtkIOXML import vtkXMLImageDataReader, vtkXMLImageDataWriter
 import invesalius.data.converters as converters
 import invesalius.data.coordinates as dco
 import invesalius.data.slice_ as sl
-import invesalius.gui.dialogs as dlg
 import invesalius.reader.bitmap_reader as bitmap_reader
 from invesalius.data import vtk_utils as vtk_utils
-from invesalius.i18n import tr as _
+from skimage.color import rgb2gray
+
+if sys.platform == "win32":
+    try:
+        import win32api
+        _has_win32api = True
+    except ImportError:
+        _has_win32api = False
+else:
+    _has_win32api = False
 
 # TODO: Test cases which are originally in sagittal/coronal orientation
 # and have gantry
@@ -54,7 +62,7 @@ def ResampleImage3D(imagedata, value):
     extent = imagedata.GetExtent()
     size = imagedata.GetDimensions()
 
-    # width = float(size[0])
+    width = float(size[0])
     height = float(size[1] / value)
 
     resolution = (height / (extent[1] - extent[0]) + 1) * spacing[1]
@@ -67,14 +75,16 @@ def ResampleImage3D(imagedata, value):
     return resample.GetOutput()
 
 
-def ResampleImage2D(imagedata, px=None, py=None, resolution_percentage=None, update_progress=None):
+def ResampleImage2D(
+    imagedata, px=None, py=None, resolution_percentage=None, update_progress=None
+):
     """
     Resample vtkImageData matrix.
     """
 
     extent = imagedata.GetExtent()
-    # spacing = imagedata.GetSpacing()
-    # dimensions = imagedata.GetDimensions()
+    spacing = imagedata.GetSpacing()
+    dimensions = imagedata.GetDimensions()
 
     if resolution_percentage:
         factor_x = resolution_percentage
@@ -99,7 +109,9 @@ def ResampleImage2D(imagedata, px=None, py=None, resolution_percentage=None, upd
     #  resample.SetOutputSpacing(spacing[0] * factor_x, spacing[1] * factor_y, spacing[2])
     if update_progress:
         message = _("Generating multiplanar visualization...")
-        resample.AddObserver("ProgressEvent", lambda obj, evt: update_progress(resample, message))
+        resample.AddObserver(
+            "ProgressEvent", lambda obj, evt: update_progress(resample, message)
+        )
     resample.Update()
 
     return resample.GetOutput()
@@ -120,10 +132,9 @@ def resize_slice(im_array, resolution_percentage):
 def resize_image_array(image, resolution_percentage, as_mmap=False):
     out = zoom(image, resolution_percentage, image.dtype, order=2)
     if as_mmap:
-        fd, fname = tempfile.mkstemp(suffix="_resized")
+        fname = tempfile.mktemp(suffix="_resized")
         out_mmap = np.memmap(fname, shape=out.shape, dtype=out.dtype, mode="w+")
         out_mmap[:] = out
-        os.close(fd)
         return out_mmap
     return out
 
@@ -144,7 +155,7 @@ def FixGantryTilt(matrix, spacing, tilt):
     Fix gantry tilt given a vtkImageData and the tilt value. Return new
     vtkImageData.
     """
-    angle = np.radians(tilt)
+    angle = numpy.radians(tilt)
     spacing = spacing[0], spacing[1], spacing[2]
     gntan = math.tan(angle)
 
@@ -268,33 +279,32 @@ def create_dicom_thumbnails(image, window=None, level=None):
         thumbnail_paths = []
         for i in range(np_image.shape[0]):
             thumb_image = zoom(np_image[i], 0.25)
-            thumb_image = np.array(get_LUT_value_255(thumb_image, window, level), dtype=np.uint8)
-            fd, thumbnail_path = tempfile.mkstemp(prefix="thumb_", suffix=".png")
+            thumb_image = np.array(
+                get_LUT_value_255(thumb_image, window, level), dtype=np.uint8
+            )
+            thumbnail_path = tempfile.mktemp(prefix="thumb_", suffix=".png")
             imageio.imsave(thumbnail_path, thumb_image)
             thumbnail_paths.append(thumbnail_path)
-            os.close(fd)
         return thumbnail_paths
     else:
-        fd, thumbnail_path = tempfile.mkstemp(prefix="thumb_", suffix=".png")
+        thumbnail_path = tempfile.mktemp(prefix="thumb_", suffix=".png")
         if pf.GetSamplesPerPixel() == 1:
             thumb_image = zoom(np_image, 0.25)
-            thumb_image = np.array(get_LUT_value_255(thumb_image, window, level), dtype=np.uint8)
+            thumb_image = np.array(
+                get_LUT_value_255(thumb_image, window, level), dtype=np.uint8
+            )
         else:
             thumb_image = zoom(np_image, (0.25, 0.25, 1))
         imageio.imsave(thumbnail_path, thumb_image)
-        os.close(fd)
         return thumbnail_path
 
 
 def array2memmap(arr, filename=None):
-    fd = None
     if filename is None:
-        fd, filename = tempfile.mkstemp(prefix="inv3_", suffix=".dat")
-    matrix = np.memmap(filename, mode="w+", dtype=arr.dtype, shape=arr.shape)
+        filename = tempfile.mktemp(prefix="inv3_", suffix=".dat")
+    matrix = numpy.memmap(filename, mode="w+", dtype=arr.dtype, shape=arr.shape)
     matrix[:] = arr[:]
     matrix.flush()
-    if fd:
-        os.close(fd)
     return matrix
 
 
@@ -305,9 +315,11 @@ def bitmap2memmap(files, slice_size, orientation, spacing, resolution_percentage
     """
     message = _("Generating multiplanar visualization...")
     if len(files) > 1:
-        update_progress = vtk_utils.ShowProgress(len(files) - 1, dialog_type="ProgressDialog")
+        update_progress = vtk_utils.ShowProgress(
+            len(files) - 1, dialog_type="ProgressDialog"
+        )
 
-    temp_fd, temp_file = tempfile.mkstemp()
+    temp_file = tempfile.mktemp()
 
     if orientation == "SAGITTAL":
         if resolution_percentage == 1.0:
@@ -339,12 +351,13 @@ def bitmap2memmap(files, slice_size, orientation, spacing, resolution_percentage
             )
 
     if resolution_percentage == 1.0:
-        matrix = np.memmap(temp_file, mode="w+", dtype="int16", shape=shape)
+        matrix = numpy.memmap(temp_file, mode="w+", dtype="int16", shape=shape)
 
     cont = 0
     max_scalar = None
     min_scalar = None
 
+    xy_shape = None
     first_resample_entry = False
 
     for n, f in enumerate(files):
@@ -357,6 +370,7 @@ def bitmap2memmap(files, slice_size, orientation, spacing, resolution_percentage
         )
 
         if resolution_percentage != 1.0:
+
             image_resized = ResampleImage2D(
                 image,
                 px=None,
@@ -372,7 +386,7 @@ def bitmap2memmap(files, slice_size, orientation, spacing, resolution_percentage
 
             if not (first_resample_entry):
                 shape = shape[0], yx_shape[0], yx_shape[1]
-                matrix = np.memmap(temp_file, mode="w+", dtype="int16", shape=shape)
+                matrix = numpy.memmap(temp_file, mode="w+", dtype="int16", shape=shape)
                 first_resample_entry = True
 
             image = image_resized
@@ -410,7 +424,6 @@ def bitmap2memmap(files, slice_size, orientation, spacing, resolution_percentage
 
     matrix.flush()
     scalar_range = min_scalar, max_scalar
-    os.close(temp_fd)
 
     return matrix, scalar_range, temp_file
 
@@ -422,12 +435,14 @@ def dcm2memmap(files, slice_size, orientation, resolution_percentage):
     """
     if len(files) > 1:
         message = _("Generating multiplanar visualization...")
-        update_progress = vtk_utils.ShowProgress(len(files) - 1, dialog_type="ProgressDialog")
+        update_progress = vtk_utils.ShowProgress(
+            len(files) - 1, dialog_type="ProgressDialog"
+        )
 
     first_slice = read_dcm_slice_as_np2(files[0], resolution_percentage)
     slice_size = first_slice.shape[::-1]
 
-    temp_fd, temp_file = tempfile.mkstemp()
+    temp_file = tempfile.mktemp()
 
     if orientation == "SAGITTAL":
         shape = slice_size[0], slice_size[1], len(files)
@@ -436,7 +451,7 @@ def dcm2memmap(files, slice_size, orientation, resolution_percentage):
     else:
         shape = len(files), slice_size[1], slice_size[0]
 
-    matrix = np.memmap(temp_file, mode="w+", dtype="int16", shape=shape)
+    matrix = numpy.memmap(temp_file, mode="w+", dtype="int16", shape=shape)
     for n, f in enumerate(files):
         im_array = read_dcm_slice_as_np2(f, resolution_percentage)[::-1]
 
@@ -454,7 +469,6 @@ def dcm2memmap(files, slice_size, orientation, resolution_percentage):
 
     matrix.flush()
     scalar_range = matrix.min(), matrix.max()
-    os.close(temp_fd)
 
     return matrix, scalar_range, temp_file
 
@@ -470,8 +484,8 @@ def dcmmf2memmap(dcm_file, orientation):
     np_image = converters.gdcm_to_numpy(image, pf.GetSamplesPerPixel() == 1)
     if samples_per_pixel == 3:
         np_image = image_normalize(rgb2gray(np_image), 0, 255)
-    temp_fd, temp_file = tempfile.mkstemp()
-    matrix = np.memmap(temp_file, mode="w+", dtype="int16", shape=np_image.shape)
+    temp_file = tempfile.mktemp()
+    matrix = numpy.memmap(temp_file, mode="w+", dtype="int16", shape=np_image.shape)
     z, y, x = np_image.shape
     if orientation == "CORONAL":
         spacing = xs, zs, ys
@@ -489,7 +503,6 @@ def dcmmf2memmap(dcm_file, orientation):
 
     matrix.flush()
     scalar_range = matrix.min(), matrix.max()
-    os.close(temp_fd)
 
     return matrix, scalar_range, spacing, temp_file
 
@@ -500,7 +513,7 @@ def img2memmap(group):
     returns it and its related filename.
     """
 
-    temp_fd, temp_file = tempfile.mkstemp()
+    temp_file = tempfile.mktemp()
 
     data = group.get_fdata()
 
@@ -508,30 +521,18 @@ def img2memmap(group):
     # to be rescalaed so that no negative values are created when converting to int16
     # maximum of 10000 was selected arbitrarily by testing with one MRI example
     # alternatively could test if "data.dtype == 'float64'" but maybe it is too specific
-    if np.ptp(data) > (2**16 / 2 - 1):
+    if numpy.ptp(data) > (2**16/2-1):
         data = image_normalize(data, min_=0, max_=10000, output_dtype=np.int16)
-        dlg.WarningRescalePixelValues()
-
-    # images can have pixel intensities in small float numbers which after int conversion will
-    # have to be binary (0, 1). To prevent that, rescale pixel values from 0-255
-    elif data.max() < (2**3):
-        data_temp = image_normalize(data, min_=0, max_=255, output_dtype=np.int16)
-        status = dlg.DialogRescalePixelIntensity(data.max(), np.unique(data_temp).size)
-
-        if status:
-            data = data_temp
-            # dlg.WarningRescalePixelValues()
 
     # Convert RAS+ to default InVesalius orientation ZYX
-    data = np.swapaxes(data, 0, 2)
-    data = np.fliplr(data)
+    data = numpy.swapaxes(data, 0, 2)
+    data = numpy.fliplr(data)
 
-    matrix = np.memmap(temp_file, mode="w+", dtype=np.int16, shape=data.shape)
+    matrix = numpy.memmap(temp_file, mode="w+", dtype=np.int16, shape=data.shape)
     matrix[:] = data[:]
     matrix.flush()
 
-    scalar_range = np.amin(matrix), np.amax(matrix)
-    os.close(temp_fd)
+    scalar_range = numpy.amin(matrix), numpy.amax(matrix)
 
     return matrix, scalar_range, temp_file
 
@@ -551,29 +552,15 @@ def get_LUT_value_255(data, window, level):
     return data
 
 
-def get_LUT_value(data: np.ndarray, window: int, level: int) -> np.ndarray:
+def get_LUT_value(data, window, level):
     shape = data.shape
     data_ = data.ravel()
-    data = np.piecewise(
-        data_,
-        [data_ <= (level - 0.5 - (window - 1) / 2), data_ > (level - 0.5 + (window - 1) / 2)],
-        [0, window, lambda data_: ((data_ - (level - 0.5)) / (window - 1) + 0.5) * (window)],
-    )
+    data = np.piecewise(data_,
+                        [data_ <= (level - 0.5 - (window-1)/2),
+                         data_ > (level - 0.5 + (window-1)/2)],
+                        [0, window, lambda data_: ((data_ - (level - 0.5))/(window-1) + 0.5)*(window)])
     data.shape = shape
     return data
-
-
-def get_LUT_value_normalized(img, a_min, a_max, b_min=0.0, b_max=1.0, clip=True):
-    # based on https://docs.monai.io/en/latest/_modules/monai/transforms/intensity/array.html#ScaleIntensity
-
-    print(a_min, a_max, b_min, b_max, clip)
-    img = (img - a_min) / (a_max - a_min)
-    img = img * (b_max - b_min) + b_min
-
-    if clip:
-        img = np.clip(img, b_min, b_max)
-
-    return img
 
 
 def image_normalize(image, min_=0.0, max_=1.0, output_dtype=np.int16):
@@ -622,9 +609,7 @@ def convert_invesalius_to_voxel(position):
     :return: a vector of 3 coordinates in the voxel space
     """
     slice = sl.Slice()
-    return np.array(
-        (position[0], slice.spacing[1] * (slice.matrix.shape[1] - 1) - position[1], position[2])
-    )
+    return np.array((position[0], slice.spacing[1]*(slice.matrix.shape[1] - 1) - position[1], position[2]))
 
 
 def convert_invesalius_to_world(position, orientation):
@@ -657,13 +642,13 @@ def convert_invesalius_to_world(position, orientation):
     M_invesalius = dco.coordinates_to_transformation_matrix(
         position=position_voxel,
         orientation=orientation,
-        axes="sxyz",
+        axes='sxyz',
     )
     M_world = np.linalg.inv(slice.affine) @ M_invesalius
 
     position_world, orientation_world = dco.transformation_matrix_to_coordinates(
         M_world,
-        axes="sxyz",
+        axes='sxyz',
     )
 
     return position_world, orientation_world
@@ -701,17 +686,10 @@ def create_spherical_grid(radius=10, subdivision=1):
 
 
 def random_sample_sphere(radius=3, size=100):
-    uvw = np.random.default_rng().normal(0, 1, (size, 3))
+    uvw = np.random.normal(0, 1, (size, 3))
     norm = np.linalg.norm(uvw, axis=1, keepdims=True)
     # Change/remove **(1./3) to make samples more concentrated around the center
-    r = np.random.default_rng().uniform(0, 1, (size, 1)) ** 1.5
+    r = np.random.uniform(0, 1, (size, 1)) ** 1.5
     scale = radius * np.divide(r, norm)
     xyz = scale * uvw
     return xyz
-
-
-def get_largest_connected_component(image):
-    labels = label(image)
-    assert labels.max() != 0
-    largest_component = labels == np.argmax(np.bincount(labels.flat)[1:]) + 1
-    return largest_component

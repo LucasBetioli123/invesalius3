@@ -1,10 +1,9 @@
-import math
-from typing import Iterable, List, Sequence, Tuple
+# -*- coding: utf-8 -*-
 
+import math
 import numpy as np
 
-
-def calculate_distance(p1: Iterable[float], p2: Iterable[float]) -> float:
+def calculate_distance(p1, p2):
     """
     Calculates the euclidian distance between p1 and p2 points.
 
@@ -14,10 +13,10 @@ def calculate_distance(p1: Iterable[float], p2: Iterable[float]) -> float:
     >>> calculate_distance((0, 0), (0, 1))
     1.0
     """
-    return math.sqrt(sum([(j - i) ** 2 for i, j in zip(p1, p2)]))
+    return math.sqrt(sum([(j-i)**2 for i,j in zip(p1, p2)]))
 
 
-def calculate_angle(v1: Tuple[float, ...], v2: Tuple[float, ...]) -> float:
+def calculate_angle(v1, v2):
     """
     Calculates the angle formed between vector v1 and v2.
 
@@ -27,12 +26,12 @@ def calculate_angle(v1: Tuple[float, ...], v2: Tuple[float, ...]) -> float:
     >>> calculate_angle((1, 0), (0, 1))
     90.0
     """
-    cos_ = np.dot(v1, v2) / (np.linalg.norm(v1) * np.linalg.norm(v2))
+    cos_ = np.dot(v1, v2)/(np.linalg.norm(v1)*np.linalg.norm(v2))
     angle = math.degrees(math.acos(cos_))
     return angle
 
 
-def calc_ellipse_area(a: float, b: float) -> float:
+def calc_ellipse_area(a, b):
     """
     Calculates the area of the ellipse with the given a and b radius.
 
@@ -47,20 +46,7 @@ def calc_ellipse_area(a: float, b: float) -> float:
     return np.pi * a * b
 
 
-def calc_ellipse_circumference(a: float, b: float) -> float:
-    """
-    Calculates the area of the ellipse circumference with the given a and b radius using Ramanujan formula
-    """
-    semi_axis_a = a / 2
-    semi_axis_b = b / 2
-    circumference = np.pi * (
-        3.0 * (semi_axis_a + semi_axis_b)
-        - np.sqrt((3.0 * semi_axis_a + semi_axis_b) * (semi_axis_a + 3.0 * semi_axis_b))
-    )
-    return circumference
-
-
-def calc_polygon_area(points: Sequence[Tuple[float, float]]) -> float:
+def calc_polygon_area(points):
     """
     Calculates the area from the polygon formed by given the points.
 
@@ -85,23 +71,10 @@ def calc_polygon_area(points: Sequence[Tuple[float, float]]) -> float:
     area = 0.0
     j = len(points) - 1
     for i in range(len(points)):
-        area += (points[j][0] + points[i][0]) * (points[j][1] - points[i][1])
+        area += (points[j][0]+points[i][0]) * (points[j][1]-points[i][1])
         j = i
     area = abs(area / 2.0)
     return area
-
-
-def calc_polygon_perimeter(points: List[Tuple[float, float]]) -> float:
-    """
-    Calculates the perimeter from the polygon formed by given the points.
-    """
-    perimeter = 0.0
-    n = len(points)
-    for i in range(n):
-        x1, y1 = points[i]
-        x2, y2 = points[(i + 1) % n]
-        perimeter += np.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2)
-    return perimeter
 
 
 def inner1d(v0: np.ndarray, v1: np.ndarray) -> np.ndarray:
@@ -126,7 +99,6 @@ def inner1d(v0: np.ndarray, v1: np.ndarray) -> np.ndarray:
     return (v0 * v1).sum(axis=-1)
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     import doctest
-
     doctest.testmod()
