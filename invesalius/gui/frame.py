@@ -207,8 +207,9 @@ class Frame(wx.Frame):
             return
         
         if keycode == 84: # T key
-            Publisher.sendMessage("Set cross focal point", position=self.marker.position + [None, None, None])
-            Publisher.sendMessage("Update slices position", position=self.marker.position)
+            Publisher.sendMessage("Set cross focal point", position=self.marker.position + self.marker.orientation) 
+            Publisher.sendMessage("Update slice viewer")
+            #Publisher.sendMessage("Update slices position", position=self.marker.position)
             #Publisher.sendMessage("Unhighlight marker")
             #Publisher.sendMessage("Highlight marker", marker=self.marker)
             #Publisher.sendMessage("Unset target", marker=self.marker)
