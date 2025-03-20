@@ -27,23 +27,22 @@ import time
 
 import numpy as np
 from vtkmodules.vtkCommonCore import vtkPoints, vtkUnsignedCharArray
-from vtkmodules.vtkCommonTransforms import vtkTransform
 from vtkmodules.vtkCommonDataModel import (
     vtkCellArray,
     vtkMultiBlockDataSet,
     vtkPolyData,
 )
-from vtkmodules.vtkFiltersCore import (
-    vtkCleanPolyData,
-    vtkTriangleFilter,
-    vtkTubeFilter
+from vtkmodules.vtkCommonTransforms import vtkTransform
+from vtkmodules.vtkFiltersCore import vtkCleanPolyData, vtkTriangleFilter, vtkTubeFilter
+from vtkmodules.vtkFiltersGeneral import (
+    vtkBooleanOperationPolyDataFilter,
+    vtkTransformPolyDataFilter,
 )
-from vtkmodules.vtkFiltersGeneral import vtkBooleanOperationPolyDataFilter, vtkTransformPolyDataFilter
 
 import invesalius.constants as const
 import invesalius.data.imagedata_utils as img_utils
-from invesalius.pubsub import pub as Publisher
 from invesalius.project import Project
+from invesalius.pubsub import pub as Publisher
 
 # Nice print for arrays
 # np.set_printoptions(precision=2)
@@ -239,11 +238,11 @@ def compute_and_visualize_tracts(trekker, position, affine, affine_vtk, n_tracts
                 booleanOperation.Update()
 
                 if booleanOperation.GetOutput().GetPointData().GetNumberOfArrays() > 1:
-                    print('intersection!!!!!')
-                    print('branch block: ', i)
-                    print('n_branches: ', n_branches)
+                    print("intersection!!!!!")
+                    print("branch block: ", i)
+                    print("n_branches: ", n_branches)
                 else:
-                    print('no intersection')
+                    print("no intersection")
 
             bundle.SetBlock(n_branches, branch)
             n_branches += 1
