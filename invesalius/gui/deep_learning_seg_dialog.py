@@ -3,11 +3,6 @@
 
 import importlib
 import multiprocessing
-import os
-import pathlib
-import subprocess
-import sys
-import tempfile
 import time
 
 import numpy as np
@@ -15,6 +10,7 @@ import wx
 
 import invesalius.data.slice_ as slc
 from invesalius.gui import dialogs
+from invesalius.i18n import tr as _
 from invesalius.pubsub import pub as Publisher
 from invesalius.segmentation.deep_learning import segment, utils
 
@@ -55,10 +51,11 @@ class DeepLearningSegmenterDialog(wx.Dialog):
         self,
         parent,
         title,
+        auto_segment=False,
         has_torch=True,
         has_plaidml=True,
         has_theano=True,
-        segmenter=None
+        segmenter=None,
     ):
         wx.Dialog.__init__(
             self,
@@ -78,6 +75,7 @@ class DeepLearningSegmenterDialog(wx.Dialog):
         #  self.pg_dialog = None
         self.torch_devices = TORCH_DEVICES
         self.plaidml_devices = PLAIDML_DEVICES
+        self.auto_segment = auto_segment
 
         self.backends = backends
 
@@ -96,6 +94,9 @@ class DeepLearningSegmenterDialog(wx.Dialog):
 
         self.OnSetBackend()
         self.HideProgress()
+
+        if self.auto_segment:
+            self.OnSegment(self)
 
     def _init_gui(self):
         self.cb_backends = wx.ComboBox(
@@ -149,7 +150,7 @@ class DeepLearningSegmenterDialog(wx.Dialog):
         self.btn_stop.Disable()
         self.btn_close = wx.Button(self, wx.ID_CLOSE)
 
-        self.txt_threshold.SetValue("{:3d}%".format(self.sld_threshold.GetValue()))
+        self.txt_threshold.SetValue(f"{self.sld_threshold.GetValue():3d}%")
 
     def _do_layout(self):
         main_sizer = wx.BoxSizer(wx.VERTICAL)
@@ -249,8 +250,8 @@ class DeepLearningSegmenterDialog(wx.Dialog):
         self.main_sizer.SetSizeHints(self)
 
     def OnScrollThreshold(self, evt):
-        value = self.sld_threshold.GetValue()
-        self.txt_threshold.SetValue("{:3d}%".format(self.sld_threshold.GetValue()))
+        # value = self.sld_threshold.GetValue()
+        self.txt_threshold.SetValue(f"{self.sld_threshold.GetValue():3d}%")
         if self.segmented:
             self.apply_segment_threshold()
 
@@ -262,7 +263,7 @@ class DeepLearningSegmenterDialog(wx.Dialog):
         except ValueError:
             value = self.sld_threshold.GetValue()
         self.sld_threshold.SetValue(value)
-        self.txt_threshold.SetValue("{:3d}%".format(value))
+        self.txt_threshold.SetValue(f"{value:3d}%")
 
         if self.segmented:
             self.apply_segment_threshold()
@@ -286,7 +287,7 @@ class DeepLearningSegmenterDialog(wx.Dialog):
         apply_wwwl = self.chk_apply_wwwl.GetValue()
         create_new_mask = self.chk_new_mask.GetValue()
         use_gpu = self.chk_use_gpu.GetValue()
-        prob_threshold = self.sld_threshold.GetValue() / 100.0
+        # prob_threshold = self.sld_threshold.GetValue() / 100.0
         self.btn_close.Disable()
         self.btn_stop.Enable()
         self.btn_segment.Disable()
@@ -315,9 +316,7 @@ class DeepLearningSegmenterDialog(wx.Dialog):
             self.HideProgress()
             dlg = dialogs.ErrorMessageBox(
                 None,
-                "It was not possible to start brain segmentation because:"
-                + "\n"
-                + str(err),
+                "It was not possible to start brain segmentation because:" + "\n" + str(err),
                 "Brain segmentation error",
                 #  wx.ICON_ERROR | wx.OK,
             )
@@ -343,6 +342,10 @@ class DeepLearningSegmenterDialog(wx.Dialog):
         self.chk_new_mask.Disable()
         self.elapsed_time_timer.Stop()
         self.apply_segment_threshold()
+
+        if self.auto_segment:
+            self.OnClose(self)
+            Publisher.sendMessage("Brain segmentation completed")
 
     def SetProgress(self, progress):
         self.progress.SetValue(int(progress * 100))
@@ -370,11 +373,12 @@ class DeepLearningSegmenterDialog(wx.Dialog):
                 return
 
             progress = self.ps.get_completion()
-            if progress == np.Inf:
+            if progress == np.inf:
                 progress = 1
                 self.AfterSegment()
-            progress = max(0, min(progress, 1))
-            self.SetProgress(float(progress))
+            else:
+                progress = max(0, min(progress, 1))
+                self.SetProgress(float(progress))
 
     def OnClose(self, evt):
         #  self.segmenter.stop = True
@@ -405,14 +409,15 @@ class DeepLearningSegmenterDialog(wx.Dialog):
 
 
 class BrainSegmenterDialog(DeepLearningSegmenterDialog):
-    def __init__(self, parent):
+    def __init__(self, parent, auto_segment=False):
         super().__init__(
             parent=parent,
             title=_("Brain segmentation"),
             has_torch=True,
             has_plaidml=True,
             has_theano=True,
-            segmenter = segment.BrainSegmentProcess,
+            segmenter=segment.BrainSegmentProcess,
+            auto_segment=auto_segment,
         )
 
 
@@ -424,7 +429,7 @@ class TracheaSegmenterDialog(DeepLearningSegmenterDialog):
             has_torch=True,
             has_plaidml=False,
             has_theano=False,
-            segmenter = segment.TracheaSegmentProcess,
+            segmenter=segment.TracheaSegmentProcess,
         )
 
 
@@ -436,7 +441,7 @@ class MandibleSegmenterDialog(DeepLearningSegmenterDialog):
             has_torch=True,
             has_plaidml=False,
             has_theano=False,
-            segmenter = segment.MandibleCTSegmentProcess,
+            segmenter=segment.MandibleCTSegmentProcess,
         )
 
     def _init_gui(self):
@@ -445,16 +450,28 @@ class MandibleSegmenterDialog(DeepLearningSegmenterDialog):
         self.chk_apply_resize_by_spacing = wx.CheckBox(self, wx.ID_ANY, _("Resize by spacing"))
         self.chk_apply_resize_by_spacing.SetValue(True)
 
-        self.patch_txt = wx.StaticText(self,label="Patch size:")
+        self.patch_txt = wx.StaticText(self, label="Patch size:")
 
-        patch_size = ["48", "96", "160", "192", "240", "288",\
-                      "320", "336", "384", "432", "480", "528"] 
-        
-        self.patch_cmb = wx.ComboBox(self, choices=patch_size,value="192") 
+        patch_size = [
+            "48",
+            "96",
+            "160",
+            "192",
+            "240",
+            "288",
+            "320",
+            "336",
+            "384",
+            "432",
+            "480",
+            "528",
+        ]
+
+        self.patch_cmb = wx.ComboBox(self, choices=patch_size, value="192")
 
         self.path_sizer = wx.BoxSizer(wx.HORIZONTAL)
-        self.path_sizer.Add(self.patch_txt, 0, wx.EXPAND | wx.ALL, 5) 
-        self.path_sizer.Add(self.patch_cmb, 2, wx.EXPAND | wx.ALL, 5) 
+        self.path_sizer.Add(self.patch_txt, 0, wx.EXPAND | wx.ALL, 5)
+        self.path_sizer.Add(self.patch_cmb, 2, wx.EXPAND | wx.ALL, 5)
 
         self.Layout()
         self.Centre()
@@ -483,7 +500,7 @@ class MandibleSegmenterDialog(DeepLearningSegmenterDialog):
         apply_wwwl = self.chk_apply_wwwl.GetValue()
         create_new_mask = self.chk_new_mask.GetValue()
         use_gpu = self.chk_use_gpu.GetValue()
-        prob_threshold = self.sld_threshold.GetValue() / 100.0
+        # prob_threshold = self.sld_threshold.GetValue() / 100.0
         resize_by_spacing = self.chk_apply_resize_by_spacing.GetValue()
 
         self.btn_close.Disable()
@@ -497,7 +514,7 @@ class MandibleSegmenterDialog(DeepLearningSegmenterDialog):
 
         overlap = self.overlap_options[self.overlap.GetSelection()]
         patch_size = int(self.patch_cmb.GetValue())
-        
+
         try:
             self.ps = self.segmenter(
                 image,
@@ -511,7 +528,7 @@ class MandibleSegmenterDialog(DeepLearningSegmenterDialog):
                 window_level,
                 patch_size=patch_size,
                 resize_by_spacing=resize_by_spacing,
-                image_spacing=slc.Slice().spacing
+                image_spacing=slc.Slice().spacing,
             )
             self.ps.start()
         except (multiprocessing.ProcessError, OSError, ValueError) as err:
@@ -519,9 +536,7 @@ class MandibleSegmenterDialog(DeepLearningSegmenterDialog):
             self.HideProgress()
             dlg = dialogs.ErrorMessageBox(
                 None,
-                "It was not possible to start brain segmentation because:"
-                + "\n"
-                + str(err),
+                "It was not possible to start brain segmentation because:" + "\n" + str(err),
                 "Brain segmentation error",
                 #  wx.ICON_ERROR | wx.OK,
             )
@@ -530,3 +545,128 @@ class MandibleSegmenterDialog(DeepLearningSegmenterDialog):
     def OnStop(self, evt):
         super().OnStop(evt)
         self.chk_apply_resize_by_spacing.Enable()
+
+
+class ImplantSegmenterDialog(DeepLearningSegmenterDialog):
+    def __init__(self, parent):
+        super().__init__(
+            parent=parent,
+            title=_("Implant prediction (CT)"),
+            has_torch=True,
+            has_plaidml=False,
+            has_theano=False,
+            segmenter=segment.ImplantCTSegmentProcess,
+        )
+
+    def _init_gui(self):
+        super()._init_gui()
+
+        self.patch_txt = wx.StaticText(self, label="Patch size:")
+
+        patch_size = [
+            "48",
+            "96",
+            "160",
+            "192",
+            "240",
+            "288",
+            "320",
+            "336",
+            "384",
+            "432",
+            "480",
+            "528",
+        ]
+
+        self.patch_cmb = wx.ComboBox(self, choices=patch_size, value="480")
+
+        self.path_sizer = wx.BoxSizer(wx.HORIZONTAL)
+        self.path_sizer.Add(self.patch_txt, 0, wx.EXPAND | wx.ALL, 5)
+        self.path_sizer.Add(self.patch_cmb, 2, wx.EXPAND | wx.ALL, 5)
+
+        self.method = wx.RadioBox(
+            self,
+            -1,
+            "Method:",
+            wx.DefaultPosition,
+            wx.DefaultSize,
+            ["Binary", "Gray"],
+            2,
+            wx.HORIZONTAL | wx.ALIGN_LEFT | wx.NO_BORDER,
+        )
+
+        self.method_sizer = wx.BoxSizer(wx.HORIZONTAL)
+        self.method_sizer.Add(self.method, 2, wx.ALL, 5)
+
+        self.Layout()
+        self.Centre()
+
+    def _do_layout(self):
+        super()._do_layout()
+        self.main_sizer.Insert(8, self.path_sizer, 0, wx.EXPAND | wx.ALL, 5)
+        self.main_sizer.Insert(9, self.method_sizer, 0, wx.EXPAND | wx.ALL, 5)
+
+    def OnSegment(self, evt):
+        self.ShowProgress()
+        self.t0 = time.time()
+        self.elapsed_time_timer.Start(1000)
+        image = slc.Slice().matrix
+        backend = self.cb_backends.GetValue()
+        if backend.lower() == "pytorch":
+            try:
+                device_id = self.torch_devices[self.cb_devices.GetValue()]
+            except (KeyError, AttributeError):
+                device_id = "cpu"
+        else:
+            try:
+                device_id = self.plaidml_devices[self.cb_devices.GetValue()]
+            except (KeyError, AttributeError):
+                device_id = "llvm_cpu.0"
+        apply_wwwl = self.chk_apply_wwwl.GetValue()
+        create_new_mask = self.chk_new_mask.GetValue()
+        use_gpu = self.chk_use_gpu.GetValue()
+        prob_threshold = self.sld_threshold.GetValue() / 100.0
+        method = self.method.GetSelection()
+
+        self.btn_close.Disable()
+        self.btn_stop.Enable()
+        self.btn_segment.Disable()
+        self.chk_new_mask.Disable()
+
+        window_width = slc.Slice().window_width
+        window_level = slc.Slice().window_level
+
+        overlap = self.overlap_options[self.overlap.GetSelection()]
+
+        patch_size = int(self.patch_cmb.GetValue())
+
+        try:
+            self.ps = self.segmenter(
+                image,
+                create_new_mask,
+                backend,
+                device_id,
+                use_gpu,
+                overlap,
+                apply_wwwl,
+                window_width,
+                window_level,
+                method=method,
+                patch_size=patch_size,
+                resize_by_spacing=True,
+                image_spacing=slc.Slice().spacing,
+            )
+            self.ps.start()
+        except (multiprocessing.ProcessError, OSError, ValueError) as err:
+            self.OnStop(None)
+            self.HideProgress()
+            dlg = dialogs.ErrorMessageBox(
+                None,
+                "It was not possible to start brain segmentation because:" + "\n" + str(err),
+                "Brain segmentation error",
+                #  wx.ICON_ERROR | wx.OK,
+            )
+            dlg.ShowModal()
+
+    def OnStop(self, evt):
+        super().OnStop(evt)

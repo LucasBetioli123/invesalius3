@@ -19,6 +19,7 @@
 
 import os
 import sys
+
 import wx
 
 try:
@@ -27,24 +28,20 @@ except ImportError:
     from wx.combo import BitmapComboBox
 
 import invesalius.i18n as i18n
+from invesalius.i18n import tr as _
+from invesalius.inv_paths import ICON_DIR
 
 file_path = os.path.split(__file__)[0]
 
-if hasattr(sys, "frozen") and (
-    sys.frozen == "windows_exe" or sys.frozen == "console_exe"
-):
+if hasattr(sys, "frozen") and (sys.frozen == "windows_exe" or sys.frozen == "console_exe"):
     abs_file_path = os.path.abspath(
         file_path + os.sep + ".." + os.sep + ".." + os.sep + ".." + os.sep + ".."
     )
     ICON_DIR = os.path.abspath(os.path.join(abs_file_path, "icons"))
-else:
-    ICON_DIR = os.path.abspath(os.path.join(file_path, "..", "..", "icons"))
 
 # MAC App
 if not os.path.exists(ICON_DIR):
-    ICON_DIR = os.path.abspath(
-        os.path.join(file_path, "..", "..", "..", "..", "..", "icons")
-    )
+    ICON_DIR = os.path.abspath(os.path.join(file_path, "..", "..", "..", "..", "..", "icons"))
 
 
 class ComboBoxLanguage:
@@ -76,7 +73,7 @@ class ComboBoxLanguage:
         self.bitmapCmb = bitmapCmb = BitmapComboBox(parent, style=wx.CB_READONLY)
         for key in self.locales_key:
             # Based on composed flag filename, get bitmap
-            filepath = os.path.join(ICON_DIR, "%s.png" % (key))
+            filepath = os.path.join(ICON_DIR, f"{key}.png")
             bmp = wx.Bitmap(filepath, wx.BITMAP_TYPE_PNG)
             # Add bitmap and info to Combo
             bitmapCmb.Append(dict_locales[key], bmp, key)
@@ -98,7 +95,7 @@ class LanguageDialog(wx.Dialog):
     selected is writing in the config.ini"""
 
     def __init__(self, parent=None, startApp=None):
-        super(LanguageDialog, self).__init__(parent, title="")
+        super().__init__(parent, title="")
         self.__TranslateMessage__()
         self.SetTitle(_("Language selection"))
         self.__init_gui()

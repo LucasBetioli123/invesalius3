@@ -1,12 +1,10 @@
-# -*- coding: utf-8 -*-
-
-#--------------------------------------------------------------------------
+# --------------------------------------------------------------------------
 # Software:     InVesalius - Software de Reconstrucao 3D de Imagens Medicas
 # Copyright:    (C) 2001  Centro de Pesquisas Renato Archer
 # Homepage:     http://www.softwarepublico.gov.br
 # Contact:      invesalius@cti.gov.br
 # License:      GNU - GPL 2 (LICENSE.txt/LICENCA.txt)
-#--------------------------------------------------------------------------
+# --------------------------------------------------------------------------
 #    Este programa e software livre; voce pode redistribui-lo e/ou
 #    modifica-lo sob os termos da Licenca Publica Geral GNU, conforme
 #    publicada pela Free Software Foundation; de acordo com a versao 2
@@ -17,7 +15,7 @@
 #    COMERCIALIZACAO ou de ADEQUACAO A QUALQUER PROPOSITO EM
 #    PARTICULAR. Consulte a Licenca Publica Geral GNU para obter mais
 #    detalhes.
-#--------------------------------------------------------------------------
+# --------------------------------------------------------------------------
 
 # Author: Victor Hugo Souza (victorhos-at-hotmail.com)
 # Contributions: Dogu Baran Aydogan
@@ -42,10 +40,9 @@ from vtkmodules.vtkFiltersCore import (
 )
 from vtkmodules.vtkFiltersGeneral import vtkBooleanOperationPolyDataFilter, vtkTransformPolyDataFilter
 
-from invesalius.pubsub import pub as Publisher
-
 import invesalius.constants as const
 import invesalius.data.imagedata_utils as img_utils
+from invesalius.pubsub import pub as Publisher
 from invesalius.project import Project
 
 # Nice print for arrays
@@ -69,7 +66,7 @@ def compute_directions(trk_n, alpha=255):
     trk_d[-1, :] *= -1
     # check that linalg norm makes second norm
     # https://stackoverflow.com/questions/21030391/how-to-normalize-an-array-in-numpy
-    direction = 255 * np.absolute((trk_d / np.linalg.norm(trk_d, axis=1)[:, None]))
+    direction = 255 * np.absolute(trk_d / np.linalg.norm(trk_d, axis=1)[:, None])
     direction = np.hstack([direction, alpha * np.ones([direction.shape[0], 1])])
     return direction.astype(int)
 
@@ -158,7 +155,9 @@ def compute_tracts(trk_list, n_tract=0, alpha=255):
     # Compute the directions
     trk_dir = [compute_directions(trk_n, alpha) for trk_n in trk_arr]
     # Compute the vtk tubes
-    out_list = [compute_tubes(trk_arr_n, trk_dir_n) for trk_arr_n, trk_dir_n in zip(trk_arr, trk_dir)]
+    out_list = [
+        compute_tubes(trk_arr_n, trk_dir_n) for trk_arr_n, trk_dir_n in zip(trk_arr, trk_dir)
+    ]
     # create a branch and add the tracts
     branch = create_branch(out_list, n_tract)
 
@@ -166,7 +165,7 @@ def compute_tracts(trk_list, n_tract=0, alpha=255):
 
 
 def compute_and_visualize_tracts(trekker, position, affine, affine_vtk, n_tracts_max):
-    """ Compute tractograms using the Trekker library.
+    """Compute tractograms using the Trekker library.
 
     :param trekker: Trekker library instance
     :type trekker: Trekker.T
@@ -254,10 +253,15 @@ def compute_and_visualize_tracts(trekker, position, affine, affine_vtk, n_tracts
         if (count_loop == 20) and (n_tracts == 0):
             break
 
-    Publisher.sendMessage('Remove tracts')
+    Publisher.sendMessage("Remove tracts")
     if n_tracts:
-        Publisher.sendMessage('Update tracts', root=bundle, affine_vtk=affine_vtk,
-                              coord_offset=position, coord_offset_w=seed_trk[0].tolist())
+        Publisher.sendMessage(
+            "Update tracts",
+            root=bundle,
+            affine_vtk=affine_vtk,
+            coord_offset=position,
+            coord_offset_w=seed_trk[0].tolist(),
+        )
 
 
 class ComputeTractsThread(threading.Thread):
@@ -285,7 +289,7 @@ class ComputeTractsThread(threading.Thread):
         :type sle: float
         """
 
-        threading.Thread.__init__(self, name='ComputeTractsThread')
+        threading.Thread.__init__(self, name="ComputeTractsThread")
         self.inp = inp
         # self.coord_queue = coord_queue
         self.coord_tracts_queue = queues[0]
@@ -295,11 +299,20 @@ class ComputeTractsThread(threading.Thread):
         self.sle = sle
 
     def run(self):
-
-        trekker, affine, offset, n_tracts_total, seed_radius, n_threads, act_data, affine_vtk, img_shift = self.inp
+        (
+            trekker,
+            affine,
+            offset,
+            n_tracts_total,
+            seed_radius,
+            n_threads,
+            act_data,
+            affine_vtk,
+            img_shift,
+        ) = self.inp
         # n_threads = n_tracts_total
-        n_threads = int(n_threads/4)
-        p_old = np.array([[0., 0., 0.]])
+        n_threads = int(n_threads / 4)
+        p_old = np.array([[0.0, 0.0, 0.0]])
         n_tracts = 0
 
         # Compute the tracts
@@ -398,7 +411,6 @@ class ComputeTractsThread(threading.Thread):
 
 
 class ComputeTractsACTThread(threading.Thread):
-
     def __init__(self, input_list, queues, event, sleep_thread):
         """Class (threading) to compute real time tractography data for visualization.
 
@@ -424,7 +436,7 @@ class ComputeTractsACTThread(threading.Thread):
         :type sleep_thread: float
         """
 
-        threading.Thread.__init__(self, name='ComputeTractsThreadACT')
+        threading.Thread.__init__(self, name="ComputeTractsThreadACT")
         self.input_list = input_list
         self.coord_tracts_queue = queues[0]
         self.tracts_queue = queues[1]
@@ -432,10 +444,19 @@ class ComputeTractsACTThread(threading.Thread):
         self.sleep_thread = sleep_thread
 
     def run(self):
+        (
+            trekker,
+            affine,
+            offset,
+            n_tracts_total,
+            seed_radius,
+            n_threads,
+            act_data,
+            affine_vtk,
+            img_shift,
+        ) = self.input_list
 
-        trekker, affine, offset, n_tracts_total, seed_radius, n_threads, act_data, affine_vtk, img_shift = self.input_list
-
-        p_old = np.array([[0., 0., 0.]])
+        p_old = np.array([[0.0, 0.0, 0.0]])
         n_branches, n_tracts, count_loop = 0, 0, 0
         bundle = None
         dist_radius = 1.5
@@ -447,7 +468,9 @@ class ComputeTractsACTThread(threading.Thread):
 
         # create the spherical grid to sample around the seed location
         samples_in_sphere = img_utils.random_sample_sphere(radius=seed_radius, size=100)
-        coord_list_sphere = np.hstack([samples_in_sphere, np.ones([samples_in_sphere.shape[0], 1])]).T
+        coord_list_sphere = np.hstack(
+            [samples_in_sphere, np.ones([samples_in_sphere.shape[0], 1])]
+        ).T
         m_seed = np.identity(4)
 
         # Compute the tracts
@@ -490,7 +513,7 @@ class ComputeTractsACTThread(threading.Thread):
                 # Spherical sampling of seed coordinates ---
                 # compute the samples of a sphere centered on seed coordinate offset by the grid
                 # given in the invesalius-vtk space
-                samples = np.random.choice(coord_list_sphere.shape[1], size=100)
+                samples = np.random.default_rng().choice(coord_list_sphere.shape[1], size=100)
                 m_seed[:-1, -1] = coord_offset.copy()
                 # translate the spherical grid samples to the coil location in invesalius-vtk space
                 seed_trk_r_inv = m_seed @ coord_list_sphere[:, samples]
@@ -502,8 +525,12 @@ class ComputeTractsACTThread(threading.Thread):
                     # find only the samples inside the white matter as with the ACT enabled in the Trekker,
                     # it does not compute any tracts outside the white matter
                     # convert from inveslaius-vtk to mri space
-                    seed_trk_r_mri = seed_trk_r_inv[:3, :].T.astype(int) + np.array([[0, img_shift, 0]], dtype=np.int32)
-                    labs = act_data[seed_trk_r_mri[..., 0], seed_trk_r_mri[..., 1], seed_trk_r_mri[..., 2]]
+                    seed_trk_r_mri = seed_trk_r_inv[:3, :].T.astype(int) + np.array(
+                        [[0, img_shift, 0]], dtype=np.int32
+                    )
+                    labs = act_data[
+                        seed_trk_r_mri[..., 0], seed_trk_r_mri[..., 1], seed_trk_r_mri[..., 2]
+                    ]
                     # find all samples in the white matter
                     labs_id = np.where(labs == 1)
                     # Trekker has internal multiprocessing approach done in C. Here the number of available threads - 1
@@ -611,6 +638,7 @@ class ComputeTractsACTThread(threading.Thread):
             # sleep required to prevent user interface from being unresponsive
             time.sleep(self.sleep_thread)
 
+
 def set_trekker_parameters(trekker, params):
     """Set all user-defined parameters for tractography computation using the Trekker library
 
@@ -621,29 +649,31 @@ def set_trekker_parameters(trekker, params):
     :return: List containing the Trekker instance and number of threads for parallel processing in the computer
     :rtype: list
     """
-    trekker.seed_maxTrials(params['seed_max'])
-    trekker.stepSize(params['step_size'])
+    trekker.seed_maxTrials(params["seed_max"])
+    trekker.stepSize(params["step_size"])
     # minFODamp is not set because it should vary in the loop to create the
     # different transparency tracts
     # trekker.minFODamp(params['min_fod'])
-    trekker.probeQuality(params['probe_quality'])
-    trekker.maxEstInterval(params['max_interval'])
-    trekker.minRadiusOfCurvature(params['min_radius_curvature'])
-    trekker.probeLength(params['probe_length'])
-    trekker.writeInterval(params['write_interval'])
+    trekker.probeQuality(params["probe_quality"])
+    trekker.maxEstInterval(params["max_interval"])
+    trekker.minRadiusOfCurvature(params["min_radius_curvature"])
+    trekker.probeLength(params["probe_length"])
+    trekker.writeInterval(params["write_interval"])
     # these two does not need to be set in the new package
     # trekker.maxLength(params['max_length'])
-    trekker.minLength(params['min_length'])
-    trekker.maxSamplingPerStep(params['max_sampling_step'])
-    trekker.dataSupportExponent(params['data_support_exponent'])
-    #trekker.useBestAtInit(params['use_best_init'])
-    #trekker.initMaxEstTrials(params['init_max_est_trials'])
+    trekker.minLength(params["min_length"])
+    trekker.maxSamplingPerStep(params["max_sampling_step"])
+    trekker.dataSupportExponent(params["data_support_exponent"])
+    # trekker.useBestAtInit(params['use_best_init'])
+    # trekker.initMaxEstTrials(params['init_max_est_trials'])
 
     # check number if number of cores is valid in configuration file,
     # otherwise use the maximum number of threads which is usually 2*N_CPUS
     n_threads = 2 * const.N_CPU - 1
-    if isinstance((params['numb_threads']), int) and params['numb_threads'] <= (2*const.N_CPU-1):
-        n_threads = params['numb_threads']
+    if isinstance((params["numb_threads"]), int) and params["numb_threads"] <= (
+        2 * const.N_CPU - 1
+    ):
+        n_threads = params["numb_threads"]
 
     trekker.numberOfThreads(n_threads)
     # print("Trekker config updated: n_threads, {}; seed_max, {}".format(n_threads, params['seed_max']))
@@ -654,19 +684,21 @@ def grid_offset(data, coord_list_w_tr, img_shift):
     # convert to int so coordinates can be used as indices in the MRI image space
     coord_list_w_tr_mri = coord_list_w_tr[:3, :].T.astype(int) + np.array([[0, img_shift, 0]])
 
-    #FIX: IndexError: index 269 is out of bounds for axis 2 with size 256
+    # FIX: IndexError: index 269 is out of bounds for axis 2 with size 256
     # error occurs when running line "labs = data[coord..."
     # need to check why there is a coordinate outside the MRI bounds
 
     # extract the first occurrence of a specific label from the MRI image
-    labs = data[coord_list_w_tr_mri[..., 0], coord_list_w_tr_mri[..., 1], coord_list_w_tr_mri[..., 2]]
+    labs = data[
+        coord_list_w_tr_mri[..., 0], coord_list_w_tr_mri[..., 1], coord_list_w_tr_mri[..., 2]
+    ]
     lab_first = np.where(labs == 1)
     if not lab_first:
         pt_found_inv = None
     else:
         pt_found = coord_list_w_tr[:, lab_first[0][0]][:3]
         # convert coordinate back to invesalius 3D space
-        pt_found_inv = pt_found - np.array([0., img_shift, 0.])
+        pt_found_inv = pt_found - np.array([0.0, img_shift, 0.0])
 
     # lab_first = np.argmax(labs == 1)
     # if labs[lab_first] == 1:
