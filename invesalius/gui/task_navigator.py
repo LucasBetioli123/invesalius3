@@ -3241,13 +3241,6 @@ class MarkersPanel(wx.Panel, ColumnSorterMixin):
         self.PopupMenu(menu_id)
         menu_id.Destroy()
 
-    def OnItemBlink(self, evt):
-        Publisher.sendMessage("Blink Marker", index=self.marker_list_ctrl.GetFocusedItem())
-        x, y, z = self.markers[self.marker_list_ctrl.GetFocusedItem()].position
-        rx, ry, rz = self.markers[self.marker_list_ctrl.GetFocusedItem()].orientation
-        Publisher.sendMessage("Set cross focal point", position=[x, y, z, rx, ry, rz])
-        Publisher.sendMessage("Update slice viewer")
-
     # Programmatically set the focus on the marker with the given index, simulating left click.
     def FocusOnMarker(self, idx):
         # Deselect the previously focused marker.
@@ -3382,6 +3375,10 @@ class MarkersPanel(wx.Panel, ColumnSorterMixin):
         idx = self.marker_list_ctrl.GetFocusedItem()
         marker = self.__get_marker(idx)
         Publisher.sendMessage("Set camera to focus on marker", marker=marker)
+        x, y, z = marker.position
+        rx, ry, rz = marker.orientation
+        Publisher.sendMessage("Set cross focal point", position=[x, y, z, rx, ry, rz])
+        Publisher.sendMessage("Update slice viewer")
 
     def OnCreateCoilTargetFromLandmark(self, evt):
         list_index = self.marker_list_ctrl.GetFocusedItem()
