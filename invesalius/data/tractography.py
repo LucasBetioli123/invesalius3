@@ -187,6 +187,7 @@ def compute_and_visualize_tracts(trekker, position, affine, affine_vtk, n_tracts
     bundle = vtkMultiBlockDataSet()
     n_branches, n_tracts, count_loop = 0, 0, 0
     n_threads = 2 * const.N_CPU - 1
+    n_intersection = 0
 
     while n_tracts < n_tracts_max:
         n_param = 1 + (count_loop % 10)
@@ -220,27 +221,41 @@ def compute_and_visualize_tracts(trekker, position, affine, affine_vtk, n_tracts
             transform = vtkTransform()
             transform.SetMatrix(affine_vtk)
             for i in range(branch.GetNumberOfBlocks()):
+                block = branch.GetBlock(i)
+                if block is None or block.GetNumberOfPoints() == 0 or block.GetNumberOfCells() == 0:
+                    print(f"Warning: Block {i} is empty, skipping.")
+                    continue
+
                 fil = vtkTransformPolyDataFilter()
                 fil.SetTransform(transform)
-                fil.SetInputDataObject(branch.GetBlock(i))
-                fil.Update()
+                fil.SetInputDataObject(block)
 
                 tri2 = vtkTriangleFilter()
-                tri2.SetInputData(fil.GetOutput())
-                tri2.Update()
+                tri2.SetInputConnection(fil.GetOutputPort())
+
                 clean2 = vtkCleanPolyData()
                 clean2.SetInputConnection(tri2.GetOutputPort())
                 clean2.Update()
+
                 input2 = clean2.GetOutput()
+                if input2.GetNumberOfPoints() == 0 or input2.GetNumberOfCells() == 0:
+                    print(f"Warning: Cleaned polydata for block {i} is empty, skipping.")
+                    print("no intersection")
+                    continue
+
+                if input1 is None or input1.GetNumberOfPoints() == 0:
+                    print("Error: input1 is empty!")
+                    return
 
                 booleanOperation.SetInputData(0, input1)
-                booleanOperation.SetInputData(1, input2)
+                booleanOperation.SetInputConnection(1, clean2.GetOutputPort())
                 booleanOperation.Update()
 
                 if booleanOperation.GetOutput().GetPointData().GetNumberOfArrays() > 1:
                     print("intersection!!!!!")
                     print("branch block: ", i)
                     print("n_branches: ", n_branches)
+                    n_intersection += 1
                 else:
                     print("no intersection")
 
@@ -251,7 +266,7 @@ def compute_and_visualize_tracts(trekker, position, affine, affine_vtk, n_tracts
 
         if (count_loop == 20) and (n_tracts == 0):
             break
-
+    print("n_intersection:", n_intersection)
     Publisher.sendMessage("Remove tracts")
     if n_tracts:
         Publisher.sendMessage(
