@@ -213,7 +213,7 @@ class Frame(wx.Frame):
             Publisher.sendMessage("Delete selected markers")
             return
         if keycode == 84:  # T key
-            Publisher.sendMessage("Set cross focal point", position=self.marker.position + [None, None, None])
+            Publisher.sendMessage("Set cross focal point", position=self.marker.position + self.marker.orientation)
             Publisher.sendMessage("Update slices position", position=self.marker.position)
             # Publisher.sendMessage("Unhighlight marker")
             # Publisher.sendMessage("Highlight marker", marker=self.marker)
