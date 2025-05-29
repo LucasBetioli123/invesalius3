@@ -137,6 +137,7 @@ class Frame(wx.Frame):
         # Initialize bind to pubsub events
         self.__bind_events()
         self.__bind_events_wx()
+        self.marker = None
 
         # log.initLogger()
 
@@ -162,6 +163,7 @@ class Frame(wx.Frame):
         sub(self._UpdateAUI, "Update AUI")
         sub(self._UpdateViewerFocus, "Set viewer orientation focus")
         sub(self._Exit, "Exit")
+        sub(self.TakeMarker, "Highlight marker")
 
     def __bind_events_wx(self):
         """
@@ -210,10 +212,19 @@ class Frame(wx.Frame):
         if keycode == wx.WXK_DELETE and not self.edit_data_notebook_label:
             Publisher.sendMessage("Delete selected markers")
             return
-
+        if keycode == 84:  # T key
+            Publisher.sendMessage("Set cross focal point", position=self.marker.position + [None, None, None])
+            Publisher.sendMessage("Update slices position", position=self.marker.position)
+            # Publisher.sendMessage("Unhighlight marker")
+            # Publisher.sendMessage("Highlight marker", marker=self.marker)
+            # Publisher.sendMessage("Unset target", marker=self.marker)
+            # Publisher.sendMessage("Set target", marker=self.marker)
+            return
         # For all other keys, continue with the normal event handling (propagate the event).
         event.Skip()
 
+    def TakeMarker(self, marker, render=True):
+        self.marker = marker
     def __init_aui(self):
         """
         Build AUI manager and all panels inside InVesalius frame.
