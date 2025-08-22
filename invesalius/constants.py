@@ -854,7 +854,7 @@ DEBUGTRACKAPPROACH = 10
 DEFAULT_TRACKER = SELECT
 
 NDICOMPORT = b"COM1"
-NDI_IP = ["P9-13715.local", "P9-13719.local", "P9-25026.local"]
+NDI_IP = ["P9-13715.local", "P9-13719.local", "P9-25026.local", "P9-13835.local"]
 
 TRACKERS = [
     _("Claron MicronTracker"),
@@ -999,7 +999,7 @@ SEED_RADIUS = 1.5
 # Efield Visualization
 EFIELD_MAX_RANGE_SCALE = 0.90
 CORTEX_COLOR = 190
-EFIELD_ROI_SIZE = 20
+EFIELD_ROI_SIZE = 40
 
 # Note that the sleep parameters can be set in the preferences dialog in the UI. The values here are default values,
 # selected to be a conservative compromise between frame rate and responsiveness, leaning towards responsiveness even
